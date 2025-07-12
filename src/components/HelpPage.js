@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FaShoppingBasket, FaCheckCircle, FaCopy, FaCreditCard, FaArrowLeft } from 'react-icons/fa';
+import { FaShoppingBasket, FaCheckCircle, FaCopy, FaCreditCard, FaArrowLeft, FaHandHoldingHeart, FaComment, FaShieldAlt, FaInstagram } from 'react-icons/fa';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://aoagoenbbsdhskebhmrq.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvYWdvZW5iYnNkaHNrZWJobXJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxMDA5MzksImV4cCI6MjA2NzY3NjkzOX0.8LohSV1ZaJSTl7Luo85NZjP0PMApfQy8C82cErfCRNQ';
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://aoagoenbbsdhskebhmrq.supabase.co';
+const supabaseKey = process.env.REACT_APP_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvYWdvZW5iYnNkaHNrZWJobXJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxMDA5MzksImV4cCI6MjA2NzY3NjkzOX0.8LohSV1ZaJSTl7Luo85NZjP0PMApfQy8C82cErfCRNQ';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function HelpPage() {
@@ -30,7 +30,18 @@ function HelpPage() {
 
       const { data: donationsData, error: donationsError } = await supabase
         .from('bagislar')
-        .select('id, ad_soyad, toplam_tutar, mesaj')
+        .select(`
+          id,
+          ad_soyad,
+          instagram_kullanici_adi,
+          nakdi_tutar,
+          mesaj,
+          bagis_detaylari (
+            urun_id,
+            adet,
+            urunler (ad)
+          )
+        `)
         .order('created_at', { ascending: false })
         .limit(5);
       if (donationsError) console.error('Bağışlar alınamadı:', donationsError);
@@ -108,13 +119,15 @@ function HelpPage() {
       o_anki_fiyat: item.o_anki_fiyat,
     }));
 
-    const { error: detailsError } = await supabase
-      .from('bagis_detaylari')
-      .insert(bagisDetaylari);
+    if(bagisDetaylari.length > 0){
+        const { error: detailsError } = await supabase
+            .from('bagis_detaylari')
+            .insert(bagisDetaylari);
 
-    if (detailsError) {
-      console.error('Bağış detayları kaydedilemedi:', detailsError);
-      return false;
+        if (detailsError) {
+            console.error('Bağış detayları kaydedilemedi:', detailsError);
+            return false;
+        }
     }
 
     return true;
@@ -132,7 +145,7 @@ function HelpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col items-center px-4">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col items-center px-4 pb-12">
       {/* Geri Dön Butonu */}
       {step !== 1 && (
         <button
@@ -180,9 +193,7 @@ function HelpPage() {
               Yardım Sepeti
             </h2>
           </div>
-          {loading ? (
-            <p className="mt-4 text-gray-600">Yükleniyor...</p>
-          ) : (
+          
             <>
               <div className="mt-6 flex flex-col gap-4">
                 {products.map((product) => (
@@ -191,7 +202,7 @@ function HelpPage() {
                     className="bg-white rounded-2xl shadow-lg p-4 flex items-center gap-4 hover:shadow-xl transition-shadow duration-300"
                   >
                     <img
-                      src={product.gorsel_yolu.startsWith('http') ? product.gorsel_yolu : `/urun_gorselleri/${product.gorsel_yolu}`}
+                      src={product.gorsel_yolu}
                       alt={product.ad}
                       className="w-20 h-20 object-cover rounded-xl"
                       onError={(e) => (e.target.src = 'https://via.placeholder.com/80')}
@@ -227,18 +238,22 @@ function HelpPage() {
                 <div className="flex-1 h-px bg-gray-300"></div>
               </div>
               <div className="mt-4">
-                <h3 className="text-lg font-semibold text-gray-800">Diğer Yardımlar</h3>
-                <input
-                  type="number"
-                  value={manualAmount}
-                  onChange={(e) => setManualAmount(e.target.value)}
-                  placeholder="Bağış miktarı (TL)"
-                  className="w-full mt-2 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-gray-50"
-                />
+                <div className="bg-white rounded-2xl shadow-lg p-4 hover:shadow-xl transition-shadow duration-300">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <FaHandHoldingHeart className="text-orange-600" /> Diğer Yardımlar
+                  </h3>
+                  <input
+                    type="number"
+                    value={manualAmount}
+                    onChange={(e) => setManualAmount(e.target.value)}
+                    placeholder="Bağış miktarı (TL)"
+                    className="w-full mt-2 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-gray-50"
+                  />
+                </div>
               </div>
-              <div className="mt-6 bg-gradient-to-r from-orange-100 to-red-100 rounded-xl shadow-md p-4 text-center">
+              <div className="mt-6 bg-gradient-to-r from-orange-100 to-red-100 rounded-xl shadow-md p-4 flex justify-between items-center">
                 <p className="text-lg font-semibold text-gray-800">Toplam Tutar</p>
-                <p className="text-2xl font-bold text-orange-600">{totalAmount} TL</p>
+                <p className="text-2xl font-bold text-orange-600">{totalAmount.toLocaleString('tr-TR')} TL</p>
               </div>
               <button
                 onClick={() => setStep(2)}
@@ -247,43 +262,84 @@ function HelpPage() {
               >
                 Ödemeye Geç
               </button>
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold text-gray-800">Son Yapılan Yardımlar</h3>
-                <div className="mt-4 flex flex-col gap-4">
-                  {recentDonations.map((donation) => (
-                    <div
-                      key={donation.id}
-                      className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-4 flex items-start gap-4 shadow-md hover:shadow-lg transition-shadow duration-300"
-                    >
-                      <FaCheckCircle className="text-2xl text-green-500 mt-1" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-800">
-                          {donation.ad_soyad || 'Anonim'}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Yardım: {donation.toplam_tutar} TL
-                        </p>
+              
+              <div className="w-full max-w-sm mt-16 text-center">
+                <div className="inline-flex items-center justify-center bg-gradient-to-r from-orange-500 to-red-500 p-3 rounded-full shadow-lg">
+                  <FaShieldAlt className="text-4xl text-white" />
+                </div>
+                <h3 className="mt-4 text-2xl font-extrabold text-gray-800">İyilik Hareketimiz</h3>
+                <p className="mt-1 text-sm text-gray-500">Desteğinizle hayalleri gerçeğe dönüştürüyoruz.</p>
+              </div>
+
+              <div className="w-full max-w-sm mt-6">
+                {loading ? (
+                  <p className="mt-4 text-center text-gray-600">Yükleniyor...</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {recentDonations.map((donation) => (
+                      <div
+                        key={donation.id}
+                        className="bg-white rounded-2xl shadow-lg p-4 flex flex-col gap-4 hover:shadow-xl transition-shadow duration-300"
+                      >
+                        {/* Bölüm 1: Bağışçı Bilgisi */}
+                        <div className="flex items-center gap-3">
+                          <FaHandHoldingHeart className="text-orange-500 text-xl flex-shrink-0" />
+                          {donation.instagram_kullanici_adi ? (
+                            <a 
+                              href={`https://instagram.com/${donation.instagram_kullanici_adi.replace('@', '')}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="flex items-center gap-2 text-blue-600 hover:underline"
+                            >
+                              <FaInstagram />
+                              <span className="font-semibold">{donation.instagram_kullanici_adi}</span>
+                            </a>
+                          ) : (
+                            <p className="font-semibold text-gray-800">{donation.ad_soyad || 'Anonim Bağışçı'}</p>
+                          )}
+                        </div>
+
+                        {/* Bölüm 2: Yardım Detayları */}
+                        {(donation.bagis_detaylari?.length > 0 || donation.nakdi_tutar > 0) && (
+                          <div className="flex items-start gap-3 pl-1 border-t pt-4">
+                            <FaShoppingBasket className="text-orange-500 text-xl mt-1 flex-shrink-0" />
+                            <div className="flex flex-col gap-1">
+                              {donation.bagis_detaylari.map((detay, index) => (
+                                <p key={index} className="text-gray-700">
+                                  {detay.adet} adet {detay.urunler.ad}
+                                </p>
+                              ))}
+                              {donation.nakdi_tutar > 0 && (
+                                <p className="text-gray-700 font-medium">
+                                  {donation.nakdi_tutar.toLocaleString('tr-TR')} TL Nakdi Bağış
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Bölüm 3: Mesaj */}
                         {donation.mesaj && (
-                          <p className="text-xs text-gray-500 italic mt-1">
-                            "{donation.mesaj}"
-                          </p>
+                          <div className="bg-orange-50 p-3 rounded-lg flex items-start gap-3 mt-2">
+                            <FaComment className="text-orange-500 text-lg mt-1 flex-shrink-0" />
+                            <p className="text-gray-600 italic">"{donation.mesaj}"</p>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </>
-          )}
         </div>
       )}
 
       {/* Adım 2: Ödeme Bilgileri */}
       {step === 2 && (
         <div className="w-full max-w-sm mt-8">
-          <div className="bg-gradient-to-r from-orange-100 to-red-100 rounded-xl shadow-md p-4 text-center">
+          <div className="bg-gradient-to-r from-orange-100 to-red-100 rounded-xl shadow-md p-4 flex justify-between items-center">
             <p className="text-lg font-semibold text-gray-800">Toplam Tutar</p>
-            <p className="text-2xl font-bold text-orange-600">{totalAmount} TL</p>
+            <p className="text-2xl font-bold text-orange-600">{totalAmount.toLocaleString('tr-TR')} TL</p>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mt-6">Ödeme Bilgileri</h2>
           <div className="mt-4 flex flex-col gap-4">
@@ -343,7 +399,7 @@ function HelpPage() {
           <h2 className="text-2xl font-bold text-gray-800">Teşekkürler!</h2>
           <div className="mt-6 bg-white rounded-xl shadow-md p-4">
             <label className="block text-sm font-medium text-gray-700">
-              Ad Soyad <span className="text-xs text-gray-500">(Zorunlu değil)</span>
+              Ad Soyad <span className="text-xs text-gray-500">(İsteğe bağlı)</span>
             </label>
             <input
               type="text"
@@ -359,7 +415,7 @@ function HelpPage() {
               <div className="flex-1 h-px bg-gray-300"></div>
             </div>
             <label className="block text-sm font-medium text-gray-700">
-              Instagram Kullanıcı Adı <span className="text-xs text-gray-500">(Zorunlu değil)</span>
+              Instagram Kullanıcı Adı <span className="text-xs text-gray-500">(İsteğe bağlı)</span>
             </label>
             <input
               type="text"
@@ -370,7 +426,7 @@ function HelpPage() {
               className="w-full mt-2 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-gray-50"
             />
             <label className="block mt-4 text-sm font-medium text-gray-700">
-              Mesajınız <span className="text-xs text-gray-500">(Zorunlu değil)</span>
+              Mesajınız <span className="text-xs text-gray-500">(İsteğe bağlı)</span>
             </label>
             <textarea
               name="message"
@@ -399,8 +455,8 @@ function HelpPage() {
 
       {/* Teşekkür Mesajı */}
       {showThankYou && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-30">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl m-4">
             <FaCheckCircle className="text-5xl text-green-500 mx-auto" />
             <h2 className="text-2xl font-bold text-gray-800 mt-4">Teşekkür Ederiz!</h2>
             <p className="text-lg text-gray-600 mt-2">

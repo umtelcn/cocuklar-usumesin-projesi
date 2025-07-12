@@ -1,12 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FaArrowLeft, FaCheckCircle, FaUpload, FaEdit, FaTrash } from 'react-icons/fa';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-
-const supabaseUrl = 'https://aoagoenbbsdhskebhmrq.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvYWdvZW5iYnNkaHNrZWJobXJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxMDA5MzksImV4cCI6MjA2NzY3NjkzOX0.8LohSV1ZaJSTl7Luo85NZjP0PMApfQy8C82cErfCRNQ';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 function AddProduct() {
   const [tab, setTab] = useState('add');
@@ -14,37 +10,75 @@ function AddProduct() {
   const [editFormData, setEditFormData] = useState({});
   const [file, setFile] = useState(null);
   const [products, setProducts] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [sehirler, setSehirler] = useState([]);
+  const [selectedSehir, setSelectedSehir] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // Ürünleri çek
+  // Şehirleri ve ürünleri çek
   useEffect(() => {
-    const fetchProducts = async () => {
-      const { data, error } = await supabase
+    const fetchData = async () => {
+      // Şehirler
+      const { data: sehirData, error: sehirError } = await supabase
+        .from('iller')
+        .select('id, ad')
+        .order('ad', { ascending: true });
+      if (sehirError) {
+        console.error('Şehirler alınamadı:', sehirError);
+        setError(`Şehirler yüklenirken hata: ${sehirError.message}`);
+      } else {
+        setSehirler(sehirData);
+      }
+
+      // Ürünler
+      const { data: productData, error: productError } = await supabase
         .from('urunler')
         .select('*')
         .eq('aktif', true)
         .order('sira', { ascending: true });
-      if (error) {
-        console.error('Ürünler alınamadı:', error);
-        setError(`Ürünler yüklenirken hata: ${error.message}`);
+      if (productError) {
+        console.error('Ürünler alınamadı:', productError);
+        setError(`Ürünler yüklenirken hata: ${productError.message}`);
       } else {
-        setProducts(data);
-        // Her ürün için editFormData başlat
-        const initialEditData = data.reduce((acc, product) => ({
+        setProducts(productData);
+        setEditFormData(productData.reduce((acc, product) => ({
           ...acc,
           [product.id]: { ad: product.ad, fiyat: product.fiyat, sira: product.sira },
-        }), {});
-        setEditFormData(initialEditData);
+        }), {}));
+      }
+
+      // Yardım talepleri
+      const { data: requestData, error: requestError } = await supabase
+        .from('yardim_talepleri')
+        .select(`
+          id,
+          ad_soyad,
+          il_id,
+          ilce_id,
+          telefon,
+          mesaj,
+          created_at,
+          iller:il_id (ad),
+          ilceler:ilce_id (ad),
+          yardim_talepleri_gorseller (gorsel_yolu)
+        `)
+        .order('created_at', { ascending: false });
+      if (requestError) {
+        console.error('Talepler alınamadı:', requestError);
+        setError(`Talepler yüklenirken hata: ${requestError.message}`);
+      } else {
+        setRequests(requestData);
       }
     };
-    fetchProducts();
+    fetchData();
   }, []);
 
   // Form güncelleme
   const handleFormChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError('');
   };
 
   const handleEditFormChange = (id, e) => {
@@ -52,10 +86,12 @@ function AddProduct() {
       ...editFormData,
       [id]: { ...editFormData[id], [e.target.name]: e.target.value },
     });
+    setError('');
   };
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
+    setError('');
   };
 
   // Ürün ekle
@@ -225,6 +261,11 @@ function AddProduct() {
     }
   };
 
+  // Filtrelenmiş talepler
+  const filteredRequests = selectedSehir
+    ? requests.filter((request) => request.iller.ad === selectedSehir)
+    : requests;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col items-center px-4">
       <button
@@ -234,12 +275,12 @@ function AddProduct() {
         <FaArrowLeft className="text-xl" />
       </button>
       <h2 className="text-2xl font-bold text-gray-800 mt-8 bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-red-500">
-        Ürün Yönetimi
+        Ürün ve Talep Yönetimi
       </h2>
       <div className="w-full max-w-sm mt-6 flex gap-4">
         <button
           onClick={() => setTab('add')}
-          className={`w-1/2 py-2 rounded-xl text-lg font-semibold ${
+          className={`w-1/3 py-2 rounded-xl text-lg font-semibold ${
             tab === 'add'
               ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
               : 'bg-gray-200 text-gray-800'
@@ -249,13 +290,23 @@ function AddProduct() {
         </button>
         <button
           onClick={() => setTab('edit')}
-          className={`w-1/2 py-2 rounded-xl text-lg font-semibold ${
+          className={`w-1/3 py-2 rounded-xl text-lg font-semibold ${
             tab === 'edit'
               ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
               : 'bg-gray-200 text-gray-800'
           }`}
         >
           Ürün Düzenle
+        </button>
+        <button
+          onClick={() => setTab('talepler')}
+          className={`w-1/3 py-2 rounded-xl text-lg font-semibold ${
+            tab === 'talepler'
+              ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
+              : 'bg-gray-200 text-gray-800'
+          }`}
+        >
+          Talepler
         </button>
       </div>
 
@@ -405,6 +456,72 @@ function AddProduct() {
         </div>
       )}
 
+      {/* Yardım Talepleri */}
+      {tab === 'talepler' && (
+        <div className="w-full max-w-sm mt-6">
+          <label className="block text-sm font-medium text-gray-700">
+            Şehir Filtresi
+          </label>
+          <select
+            value={selectedSehir}
+            onChange={(e) => setSelectedSehir(e.target.value)}
+            className="w-full mt-2 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-gray-50"
+          >
+            <option value="">Tüm Şehirler</option>
+            {sehirler.map((sehir) => (
+              <option key={sehir.id} value={sehir.ad}>{sehir.ad}</option>
+            ))}
+          </select>
+          <div className="mt-6 flex flex-col gap-4">
+            {filteredRequests.map((request) => (
+              <div
+                key={request.id}
+                className="bg-white rounded-xl shadow-md p-4 hover:shadow-xl transition-shadow duration-300"
+              >
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-gray-800">
+                    {request.ad_soyad || 'Anonim'}
+                  </p>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">
+                  Şehir: {request.iller.ad}
+                </p>
+                <p className="text-sm text-gray-600">
+                  İlçe: {request.ilceler.ad}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Telefon: {request.telefon}
+                </p>
+                {request.mesaj && (
+                  <p className="text-sm text-gray-600 italic mt-2">
+                    Mesaj: "{request.mesaj}"
+                  </p>
+                )}
+                {request.yardim_talepleri_gorseller.length > 0 && (
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    {request.yardim_talepleri_gorseller.map((gorsel, index) => (
+                      <img
+                        key={index}
+                        src={gorsel.gorsel_yolu}
+                        alt={`Talep Görseli ${index + 1}`}
+                        className="w-full h-20 object-cover rounded-xl"
+                        onError={(e) => (e.target.src = 'https://via.placeholder.com/80')}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {filteredRequests.length === 0 && (
+              <p className="text-gray-600 text-center mt-4">Seçilen şehirde talep bulunamadı.</p>
+            )}
+          </div>
+          {error && (
+            <p className="text-red-500 text-sm mt-4">{error}</p>
+          )}
+        </div>
+      )}
+
       {/* Başarı Modal’ı */}
       {showSuccess && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
@@ -415,7 +532,10 @@ function AddProduct() {
               Yeni ürün başarıyla eklendi. Teşekkür ederiz!
             </p>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => {
+                setShowSuccess(false);
+                navigate('/');
+              }}
               className="w-full mt-6 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl text-lg font-semibold hover:from-orange-600 hover:to-red-600"
             >
               Anasayfaya Dön
