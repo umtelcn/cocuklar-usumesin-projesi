@@ -43,24 +43,23 @@ export default function YardimSayfasi() {
   const [ilceler, setIlceler] = useState<Ilce[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // BAĞIŞLARI ÇEKEN FONKSİYON (GÜNCELLENDİ: Hata Loglama Eklendi)
+  // === BAĞIŞLARI ÇEKEN FONKSİYON (DÜZELTİLDİ) ===
   const getRecentDonations = async () => {
     setLoading(prev => ({ ...prev, donations: true }));
     try {
-      // İlişkisel verileri (join) geçici olarak basitleştirelim, eğer ilişkide sorun varsa ana veri gelsin
+      // BURASI ÇOK ÖNEMLİ: Tablo bağlantılarını '!' işareti ile açıkça belirttik.
+      // Bu sayede Supabase "Hangi bağlantıyı kullanayım?" diye hata vermeyecek.
       const { data, error } = await supabase
         .from('bagislar')
-        .select('*, bagis_detaylari(*, urunler(ad))')
+        .select('*, bagis_detaylari!bagis_detaylari_bagis_id_fkey(*, urunler!bagis_detaylari_urun_id_fkey(ad))')
         .order('created_at', { ascending: false })
         .limit(20);
 
       if (error) {
         console.error("Supabase Bağış Çekme Hatası:", error);
-        // Eğer veritabanı boşsa veya hata varsa boş dizi ata
         setRecentDonations([]);
       } else {
-        console.log("Çekilen Bağışlar:", data); // Tarayıcı konsolunda veriyi görmek için
-        setRecentDonations(data as Bagis[]);
+        setRecentDonations(data as unknown as Bagis[]);
       }
     } catch (err) {
       console.error("Beklenmedik Hata:", err);
@@ -91,7 +90,6 @@ export default function YardimSayfasi() {
         }
     };
 
-    // Sayfa yüklendiğinde çalışacaklar
     getUrunler();
     getRecentDonations();
     getIller();
