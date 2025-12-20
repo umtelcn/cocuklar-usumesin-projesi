@@ -14,8 +14,14 @@ export const metadata: Metadata = {
   description: "Desteğinizle hayalleri gerçeğe dönüştürüyoruz.",
 };
 
-// ## DÜZELTME BURADA ##
-// children prop'una React.ReactNode türünü atıyoruz.
+// ▼▼▼ KRİTİK DÜZELTME BURASI ▼▼▼
+// Bu iki satır Vercel'e şunu söyler:
+// "Sakın sayfayı hafızaya atma (Cache yapma).
+// Her giren kişi için veritabanına taze taze bağlan."
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
 export default function RootLayout({
   children,
 }: Readonly<{

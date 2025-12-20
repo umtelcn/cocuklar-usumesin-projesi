@@ -24,7 +24,7 @@ type Ilce = { id: number; name: string; };
 type Il = { id: number; name: string; districts: Ilce[]; };
 
 export default function YardimSayfasi() {
-  // === STATE'LER (Tipleriyle birlikte) ===
+  // === STATE'LER ===
   const [step, setStep] = useState(1);
   const [activeTab, setActiveTab] = useState('sepet');
   const [loading, setLoading] = useState({ urunler: true, donations: true, iller: true, form: false, saving: false });
@@ -43,12 +43,30 @@ export default function YardimSayfasi() {
   const [ilceler, setIlceler] = useState<Ilce[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // BAĞIŞLARI ÇEKEN FONKSİYON (GÜNCELLENDİ: Hata Loglama Eklendi)
   const getRecentDonations = async () => {
     setLoading(prev => ({ ...prev, donations: true }));
-    const { data, error } = await supabase.from('bagislar').select('*, bagis_detaylari(*, urunler(ad))').order('created_at', { ascending: false }).limit(20);
-    if (error) console.error("Son bağışlar çekilemedi:", error);
-    else setRecentDonations(data as Bagis[]);
-    setLoading(prev => ({ ...prev, donations: false }));
+    try {
+      // İlişkisel verileri (join) geçici olarak basitleştirelim, eğer ilişkide sorun varsa ana veri gelsin
+      const { data, error } = await supabase
+        .from('bagislar')
+        .select('*, bagis_detaylari(*, urunler(ad))')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error("Supabase Bağış Çekme Hatası:", error);
+        // Eğer veritabanı boşsa veya hata varsa boş dizi ata
+        setRecentDonations([]);
+      } else {
+        console.log("Çekilen Bağışlar:", data); // Tarayıcı konsolunda veriyi görmek için
+        setRecentDonations(data as Bagis[]);
+      }
+    } catch (err) {
+      console.error("Beklenmedik Hata:", err);
+    } finally {
+      setLoading(prev => ({ ...prev, donations: false }));
+    }
   };
   
   useEffect(() => {
@@ -73,6 +91,7 @@ export default function YardimSayfasi() {
         }
     };
 
+    // Sayfa yüklendiğinde çalışacaklar
     getUrunler();
     getRecentDonations();
     getIller();
@@ -125,6 +144,7 @@ export default function YardimSayfasi() {
     }
     setLoading(prev => ({ ...prev, form: false }));
   };
+
   const saveDonation = async () => {
     setLoading(prev => ({ ...prev, saving: true }));
     let cardDisplayName = 'İsimsiz Kahraman';
@@ -132,9 +152,25 @@ export default function YardimSayfasi() {
     else if (donationFormData.instagram.trim()) cardDisplayName = donationFormData.instagram.trim();
     const sepetUrunleri = urunler.filter(u => u.adet > 0);
     setThankYouCardData({ name: cardDisplayName, amount: checkoutAmount, itemImage: sepetUrunleri[0]?.gorsel_yolu || null });
-    const donationPayload = { ad_soyad: donationFormData.name || null, instagram_kullanici_adi: donationFormData.instagram || null, mesaj: donationFormData.message || null, is_anonymous: donationFormData.isAnonymous, nakdi_tutar: Number(manualAmount) || 0, toplam_tutar: checkoutAmount };
+    
+    const donationPayload = { 
+        ad_soyad: donationFormData.name || null, 
+        instagram_kullanici_adi: donationFormData.instagram || null, 
+        mesaj: donationFormData.message || null, 
+        is_anonymous: donationFormData.isAnonymous, 
+        nakdi_tutar: Number(manualAmount) || 0, 
+        toplam_tutar: checkoutAmount 
+    };
+
     const { data: donation, error } = await supabase.from('bagislar').insert([donationPayload]).select().single();
-    if (error) { console.error("Supabase Hata Detayı: ", error); alert('Bir hata oluştu. Lütfen tekrar deneyin.'); setLoading(prev => ({ ...prev, saving: false })); return; }
+    
+    if (error) { 
+        console.error("Supabase Bağış Kayıt Hatası: ", error); 
+        alert(`Bir hata oluştu: ${error.message}`); 
+        setLoading(prev => ({ ...prev, saving: false })); 
+        return; 
+    }
+
     if (sepetUrunleri.length > 0) {
       const bagisDetaylari = sepetUrunleri.map(item => ({ bagis_id: donation.id, urun_id: item.id, adet: item.adet, o_anki_fiyat: item.fiyat }));
       await supabase.from('bagis_detaylari').insert(bagisDetaylari);
@@ -142,6 +178,7 @@ export default function YardimSayfasi() {
     setLoading(prev => ({ ...prev, saving: false }));
     setStep(4);
   };
+
   const share = (platform: 'twitter' | 'instagram', downloadAction: () => void) => {
     const text = encodeURIComponent(`Ben de 'Çocuklar Üşümesin' diyerek ${thankYouCardData.amount} TL değerinde yardımda bulundum! #cocuklarusumesin`);
     const url = encodeURIComponent('https://cocuklarusumesin.com');
@@ -151,6 +188,7 @@ export default function YardimSayfasi() {
       downloadAction();
     }
   };
+
   const resetState = () => {
     setStep(1);
     setActiveTab('sepet');
@@ -159,6 +197,7 @@ export default function YardimSayfasi() {
     setUrunler(prev => prev.map(u => ({ ...u, adet: 0 })));
     getRecentDonations();
   };
+
   return (
     <div className="w-full max-w-sm">
       {step === 1 && (
