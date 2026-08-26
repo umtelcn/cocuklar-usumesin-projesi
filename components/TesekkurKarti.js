@@ -112,4 +112,4 @@ export default function TesekkurKarti({ cardData, share, resetState }) {
             </div>
         </div>
     );
-}
+} // vercel tetikleme
