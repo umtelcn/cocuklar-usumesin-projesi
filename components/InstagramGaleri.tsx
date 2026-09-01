@@ -10,8 +10,11 @@ export default function InstagramGaleri() {
     const [loading, setLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
 
-    // Küçük önizlemelerin otomatik kayması için referans
     const thumbnailContainerRef = useRef<HTMLDivElement>(null);
+
+    // --- MOBİL KAYDIRMA (SWIPE) İÇİN STATE'LER ---
+    const [touchStartX, setTouchStartX] = useState(0);
+    const [touchEndX, setTouchEndX] = useState(0);
 
     useEffect(() => {
         async function fetchLatestPost() {
@@ -34,7 +37,6 @@ export default function InstagramGaleri() {
         fetchLatestPost();
     }, []);
 
-    // Ana resim değiştiğinde, küçük önizleme listesini de otomatik o resme kaydır
     useEffect(() => {
         if (thumbnailContainerRef.current) {
             const container = thumbnailContainerRef.current;
@@ -58,6 +60,33 @@ export default function InstagramGaleri() {
         }
     };
 
+    // --- MOBİL KAYDIRMA HESAPLAMA FONKSİYONLARI ---
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchStartX(e.targetTouches[0].clientX);
+        setTouchEndX(0); // Yeni dokunuşta eski bitişi sıfırla
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        setTouchEndX(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStartX || !touchEndX) return;
+
+        const distance = touchStartX - touchEndX;
+        const minSwipeDistance = 50; // Kaydırmanın algılanması için gereken minimum piksel
+
+        if (distance > minSwipeDistance) {
+            nextSlide(); // Parmağı sola çekti (Sonraki resim)
+        } else if (distance < -minSwipeDistance) {
+            prevSlide(); // Parmağı sağa çekti (Önceki resim)
+        }
+
+        // Değerleri sıfırla
+        setTouchStartX(0);
+        setTouchEndX(0);
+    };
+
     if (loading) {
         return (
             <div className="w-full max-w-md mx-auto sm:px-4 mt-4 sm:mt-8">
@@ -78,10 +107,8 @@ export default function InstagramGaleri() {
         <div className="w-full max-w-md mx-auto sm:px-4 mt-4 sm:mt-8">
             <div className="bg-white sm:rounded-2xl shadow-xl shadow-orange-900/5 sm:border border-orange-50 relative overflow-hidden pb-5">
                 
-                {/* İnce Turuncu Vurgu Çizgisi */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-red-500"></div>
                 
-                {/* BAŞLIK ALANI */}
                 {gosterilecekBaslik && (
                     <div className="px-4 py-3 mt-1 flex items-center">
                         <h2 className="text-[15px] font-bold text-gray-900 tracking-tight">
@@ -90,8 +117,13 @@ export default function InstagramGaleri() {
                     </div>
                 )}
 
-                {/* ANA CAROUSEL KUTUSU (Sabit 4:5 Format) */}
-                <div className="relative w-full aspect-[4/5] bg-black group">
+                {/* ANA CAROUSEL KUTUSU (Mobil Dokunma Etkinlikleri Eklendi) */}
+                <div 
+                    className="relative w-full aspect-[4/5] bg-black group"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
                     <div 
                         className="flex transition-transform duration-500 ease-in-out h-full"
                         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
@@ -105,7 +137,7 @@ export default function InstagramGaleri() {
                                         <div className="relative w-full h-full flex items-center justify-center">
                                             <video 
                                                 src={url} 
-                                                className="w-full h-full object-cover object-center" 
+                                                className="w-full h-full object-cover object-center pointer-events-none" 
                                                 autoPlay 
                                                 muted 
                                                 loop 
@@ -121,7 +153,7 @@ export default function InstagramGaleri() {
                                         <img 
                                             src={url} 
                                             alt={`Görsel ${index + 1}`} 
-                                            className="w-full h-full object-cover object-center"
+                                            className="w-full h-full object-cover object-center pointer-events-none"
                                             onError={(e: any) => { e.target.src = "https://via.placeholder.com/400x500?text=Görsel+Bulunamadı" }}
                                         />
                                     )}
@@ -130,7 +162,6 @@ export default function InstagramGaleri() {
                         })}
                     </div>
 
-                    {/* Yön Okları */}
                     {post.medya_url.length > 1 && (
                         <>
                             <button onClick={prevSlide} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md text-gray-800 shadow-sm hover:scale-110 transition-all z-10 opacity-0 group-hover:opacity-100 sm:opacity-100">
@@ -143,7 +174,6 @@ export default function InstagramGaleri() {
                     )}
                 </div>
 
-                {/* KÜÇÜK ÖNİZLEMELER (THUMBNAILS) */}
                 {post.medya_url.length > 1 && (
                     <div 
                         ref={thumbnailContainerRef}
@@ -165,14 +195,13 @@ export default function InstagramGaleri() {
                                 >
                                     {isVideo ? (
                                         <>
-                                            {/* Önizleme karesinde video oynatılmaz, sadece ilk karesi görünür gibi durur */}
-                                            <video src={url} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                            <video src={url} className="w-full h-full object-cover pointer-events-none" />
+                                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
                                                 <FontAwesomeIcon icon={faPlay} className="text-white text-xs" />
                                             </div>
                                         </>
                                     ) : (
-                                        <img src={url} alt={`Küçük Görsel ${index + 1}`} className="w-full h-full object-cover" />
+                                        <img src={url} alt={`Küçük Görsel ${index + 1}`} className="w-full h-full object-cover pointer-events-none" />
                                     )}
                                 </button>
                             );
@@ -180,7 +209,6 @@ export default function InstagramGaleri() {
                     </div>
                 )}
 
-                {/* ALT KISIM: AÇIKLAMA (KISA ÖZET) */}
                 {post.kisa_ozet && (
                     <div className="px-4 mt-2 text-[14px] text-gray-800 leading-relaxed">
                         {gosterilecekBaslik && <span className="font-bold mr-2">{gosterilecekBaslik}</span>}
