@@ -14,16 +14,20 @@ import { faHeart, faHandHoldingHeart, faCircleInfo } from '@fortawesome/free-sol
 export default function YardimSayfasi() {
   const [aktifSekme, setAktifSekme] = useState<'bagis' | 'talep' | 'hakkimizda'>('bagis');
 
+  // TYPESCRIPT HATASI ÇÖZÜLDÜ (async/await ve try/catch yapısı kullanıldı)
   useEffect(() => {
     const ziyaretEdildi = sessionStorage.getItem('site_ziyaret_edildi');
     if (!ziyaretEdildi) {
-      supabase.rpc('site_ziyaret_artir')
-        .then(() => {
+      const ziyaretArtir = async () => {
+        try {
+          const { error } = await supabase.rpc('site_ziyaret_artir');
+          if (error) throw error;
           sessionStorage.setItem('site_ziyaret_edildi', 'true');
-        })
-        .catch(err => {
+        } catch (err: any) {
           console.error("Ziyaret sayacı artırılamadı:", err);
-        });
+        }
+      };
+      ziyaretArtir();
     }
   }, []);
 
