@@ -3,67 +3,69 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronLeft, faChevronRight, faPlay } from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft, faChevronRight, faPlay, faHeart, faVolumeMute, faVolumeUp } from '@fortawesome/free-solid-svg-icons';
 
 export default function InstagramGaleri() {
-    const [post, setPost] = useState<any>(null);
+    const [gonderiler, setGonderiler] = useState<any[]>([]);
+    const [seciliPostIndex, setSeciliPostIndex] = useState<number>(0);
+    const [currentIndex, setCurrentIndex] = useState<number>(0);
     const [loading, setLoading] = useState(true);
-    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isMuted, setIsMuted] = useState(true);
 
     const thumbnailContainerRef = useRef<HTMLDivElement>(null);
 
-    // --- MOBİL KAYDIRMA (SWIPE) İÇİN STATE'LER ---
+    // Mobil Kaydırma (Swipe) State'leri
     const [touchStartX, setTouchStartX] = useState(0);
     const [touchEndX, setTouchEndX] = useState(0);
 
+    const formatInstagramSayi = (sayi: number) => {
+        if (!sayi || sayi === 0) return null;
+        if (sayi >= 1_000_000) return (sayi / 1_000_000).toFixed(1).replace('.0', '') + 'M';
+        if (sayi >= 1_000) return (sayi / 1_000).toFixed(sayi >= 10_000 ? 0 : 1).replace('.0', '') + 'B';
+        return sayi.toString();
+    };
+
     useEffect(() => {
-        async function fetchLatestPost() {
+        async function tumGonderileriGetir() {
             try {
                 const { data, error } = await supabase
                     .from('gerceklesen_dilekler')
                     .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .single();
+                    .order('sira', { ascending: true })
+                    .order('created_at', { ascending: false });
 
-                if (error && error.code !== 'PGRST116') throw error;
-                if (data) setPost(data);
+                if (error) throw error;
+                if (data) setGonderiler(data);
             } catch (error) {
-                console.error('Son gönderi çekilirken hata oluştu:', error);
+                console.error('Gönderiler yüklenirken hata oluştu:', error);
             } finally {
                 setLoading(false);
             }
         }
-        fetchLatestPost();
+        tumGonderileriGetir();
     }, []);
 
     useEffect(() => {
-        if (thumbnailContainerRef.current) {
-            const container = thumbnailContainerRef.current;
-            const activeThumbnail = container.children[currentIndex] as HTMLElement;
-            if (activeThumbnail) {
-                const scrollLeft = activeThumbnail.offsetLeft - (container.clientWidth / 2) + (activeThumbnail.clientWidth / 2);
-                container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
-            }
-        }
-    }, [currentIndex]);
+        setCurrentIndex(0);
+    }, [seciliPostIndex]);
+
+    const aktifPost = gonderiler[seciliPostIndex];
 
     const nextSlide = () => {
-        if (post?.medya_url) {
-            setCurrentIndex((prev) => (prev === post.medya_url.length - 1 ? 0 : prev + 1));
+        if (aktifPost?.medya_url) {
+            setCurrentIndex((prev) => (prev === aktifPost.medya_url.length - 1 ? 0 : prev + 1));
         }
     };
 
     const prevSlide = () => {
-        if (post?.medya_url) {
-            setCurrentIndex((prev) => (prev === 0 ? post.medya_url.length - 1 : prev - 1));
+        if (aktifPost?.medya_url) {
+            setCurrentIndex((prev) => (prev === 0 ? aktifPost.medya_url.length - 1 : prev - 1));
         }
     };
 
-    // --- MOBİL KAYDIRMA HESAPLAMA FONKSİYONLARI ---
     const handleTouchStart = (e: React.TouchEvent) => {
         setTouchStartX(e.targetTouches[0].clientX);
-        setTouchEndX(0); // Yeni dokunuşta eski bitişi sıfırla
+        setTouchEndX(0);
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
@@ -72,17 +74,15 @@ export default function InstagramGaleri() {
 
     const handleTouchEnd = () => {
         if (!touchStartX || !touchEndX) return;
-
         const distance = touchStartX - touchEndX;
-        const minSwipeDistance = 50; // Kaydırmanın algılanması için gereken minimum piksel
+        const minSwipeDistance = 50;
 
         if (distance > minSwipeDistance) {
-            nextSlide(); // Parmağı sola çekti (Sonraki resim)
+            nextSlide();
         } else if (distance < -minSwipeDistance) {
-            prevSlide(); // Parmağı sağa çekti (Önceki resim)
+            prevSlide();
         }
 
-        // Değerleri sıfırla
         setTouchStartX(0);
         setTouchEndX(0);
     };
@@ -99,9 +99,10 @@ export default function InstagramGaleri() {
         );
     }
 
-    if (!post || !post.medya_url || post.medya_url.length === 0) return null;
+    if (!gonderiler || gonderiler.length === 0 || !aktifPost) return null;
 
-    const gosterilecekBaslik = post.baslik && post.baslik !== 'Başlıksız Gönderi' ? post.baslik : null;
+    const gosterilecekBaslik = aktifPost.baslik && aktifPost.baslik !== 'Başlıksız Gönderi' ? aktifPost.baslik : null;
+    const formatliBegeni = formatInstagramSayi(aktifPost.begeni_sayisi);
 
     return (
         <div className="w-full max-w-md mx-auto sm:px-4 mt-4 sm:mt-8">
@@ -117,9 +118,9 @@ export default function InstagramGaleri() {
                     </div>
                 )}
 
-                {/* ANA CAROUSEL KUTUSU (Mobil Dokunma Etkinlikleri Eklendi) */}
+                {/* ANA CAROUSEL KUTUSU (Büyük Galeri) */}
                 <div 
-                    className="relative w-full aspect-[4/5] bg-black group"
+                    className="relative w-full aspect-[4/5] bg-black"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
@@ -128,25 +129,26 @@ export default function InstagramGaleri() {
                         className="flex transition-transform duration-500 ease-in-out h-full"
                         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
                     >
-                        {post.medya_url.map((url: string, index: number) => {
+                        {aktifPost.medya_url.map((url: string, index: number) => {
                             const isVideo = url.toLowerCase().match(/\.(mp4|webm|mov)$/i);
                             
                             return (
                                 <div key={index} className="w-full h-full shrink-0 relative bg-black">
                                     {isVideo ? (
-                                        <div className="relative w-full h-full flex items-center justify-center">
+                                        <div 
+                                            className="relative w-full h-full flex items-center justify-center cursor-pointer"
+                                            onClick={() => setIsMuted(!isMuted)}
+                                        >
                                             <video 
                                                 src={url} 
-                                                className="w-full h-full object-cover object-center pointer-events-none" 
+                                                className="w-full h-full object-cover object-center" 
                                                 autoPlay 
-                                                muted 
+                                                muted={isMuted} 
                                                 loop 
                                                 playsInline 
                                             />
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <div className="w-12 h-12 bg-black/40 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
-                                                    <FontAwesomeIcon icon={faPlay} className="text-white ml-1 shadow-sm" />
-                                                </div>
+                                            <div className="absolute bottom-4 right-4 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 text-white shadow-lg transition-transform hover:scale-110 z-10">
+                                                <FontAwesomeIcon icon={isMuted ? faVolumeMute : faVolumeUp} className="text-sm" />
                                             </div>
                                         </div>
                                     ) : (
@@ -162,57 +164,82 @@ export default function InstagramGaleri() {
                         })}
                     </div>
 
-                    {post.medya_url.length > 1 && (
+                    {/* GÖNDERİ İÇİNDEKİ BEĞENİ SAYACI (Sol Alt Köşe - Medyanın Üzerinde) */}
+                    {formatliBegeni && (
+                        <div className="absolute bottom-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20 shadow-lg z-10 pointer-events-none">
+                            <FontAwesomeIcon icon={faHeart} className="text-red-500 text-sm" />
+                            <span className="text-xs font-bold text-white tracking-wide">
+                                {formatliBegeni} beğeni
+                            </span>
+                        </div>
+                    )}
+
+                    {/* SAĞ-SOL OKLARI */}
+                    {aktifPost.medya_url.length > 1 && (
                         <>
-                            <button onClick={prevSlide} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md text-gray-800 shadow-sm hover:scale-110 transition-all z-10 opacity-0 group-hover:opacity-100 sm:opacity-100">
-                                <FontAwesomeIcon icon={faChevronLeft} className="mr-0.5 text-sm" />
+                            <button 
+                                onClick={prevSlide} 
+                                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-md hover:bg-white hover:scale-110 transition-all z-20 focus:outline-none"
+                                aria-label="Önceki Medya"
+                            >
+                                <FontAwesomeIcon icon={faChevronLeft} className="text-sm" />
                             </button>
-                            <button onClick={nextSlide} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md text-gray-800 shadow-sm hover:scale-110 transition-all z-10 opacity-0 group-hover:opacity-100 sm:opacity-100">
-                                <FontAwesomeIcon icon={faChevronRight} className="ml-0.5 text-sm" />
+                            <button 
+                                onClick={nextSlide} 
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-md hover:bg-white hover:scale-110 transition-all z-20 focus:outline-none"
+                                aria-label="Sonraki Medya"
+                            >
+                                <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
                             </button>
                         </>
                     )}
                 </div>
 
-                {post.medya_url.length > 1 && (
-                    <div 
-                        ref={thumbnailContainerRef}
-                        className="flex gap-2 overflow-x-auto px-4 mt-3 pt-1 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x"
-                    >
-                        {post.medya_url.map((url: string, index: number) => {
-                            const isVideo = url.toLowerCase().match(/\.(mp4|webm|mov)$/i);
-                            const isActive = index === currentIndex;
-                            
-                            return (
-                                <button
-                                    key={index}
-                                    onClick={() => setCurrentIndex(index)}
-                                    className={`relative w-14 h-14 shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-300 snap-center focus:outline-none ${
-                                        isActive 
-                                        ? 'border-orange-500 opacity-100 shadow-md scale-105' 
-                                        : 'border-transparent opacity-60 hover:opacity-100 scale-100'
-                                    }`}
-                                >
-                                    {isVideo ? (
-                                        <>
-                                            <video src={url} className="w-full h-full object-cover pointer-events-none" />
-                                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
-                                                <FontAwesomeIcon icon={faPlay} className="text-white text-xs" />
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <img src={url} alt={`Küçük Görsel ${index + 1}`} className="w-full h-full object-cover pointer-events-none" />
-                                    )}
-                                </button>
-                            );
-                        })}
+                {/* ALT KISIMDA TÜM GÖNDERİLERİN KAPAK ÖNİZLEMELERİ */}
+                {gonderiler.length > 1 && (
+                    <div className="px-4 mt-3">
+                       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Çalışmalarımız</p>
+                        <div 
+                            ref={thumbnailContainerRef}
+                            className="flex gap-2.5 overflow-x-auto pt-1 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] snap-x"
+                        >
+                            {gonderiler.map((p, pIndex) => {
+                                const isSelected = pIndex === seciliPostIndex;
+                                const kapak = p.kapak_gorseli || (p.medya_url && p.medya_url[0]);
+                                const isVideo = kapak && kapak.toLowerCase().match(/\.(mp4|webm|mov)$/i);
+
+                                return (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => setSeciliPostIndex(pIndex)}
+                                        className={`relative w-16 h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all duration-300 snap-center focus:outline-none shadow-sm ${
+                                            isSelected 
+                                            ? 'border-orange-500 opacity-100 scale-105 shadow-md ring-2 ring-orange-500/20' 
+                                            : 'border-gray-200 opacity-60 hover:opacity-100 scale-100'
+                                        }`}
+                                    >
+                                        {isVideo ? (
+                                            <>
+                                                <video src={kapak} className="w-full h-full object-cover pointer-events-none" />
+                                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
+                                                    <FontAwesomeIcon icon={faPlay} className="text-white text-xs" />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <img src={kapak} alt="Önizleme" className="w-full h-full object-cover pointer-events-none" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 
-                {post.kisa_ozet && (
-                    <div className="px-4 mt-2 text-[14px] text-gray-800 leading-relaxed">
+                {/* AÇIKLAMA / KISA ÖZET */}
+                {aktifPost.kisa_ozet && (
+                    <div className="px-4 mt-3 text-[14px] text-gray-800 leading-relaxed">
                         {gosterilecekBaslik && <span className="font-bold mr-2">{gosterilecekBaslik}</span>}
-                        <span>{post.kisa_ozet}</span>
+                        <span>{aktifPost.kisa_ozet}</span>
                     </div>
                 )}
             </div>
