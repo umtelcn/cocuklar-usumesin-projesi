@@ -248,7 +248,11 @@ export default function BagisListesi({
       // (nakdi) bağışı gösterilir; nakdi görünümde ürün rozeti çizilmez.
       if (gorunum === "nakdi") {
         liste.push({ ...kisi, urunler: [] });
-      } else if (kalemListesi.length > 0 || kisi.id === kendiBagisId) {
+      } else if (
+        kalemListesi.length > 0 ||
+        (kisi.nakdi_tutar ?? 0) > 0 ||
+        kisi.id === kendiBagisId
+      ) {
         liste.push({ ...kisi, urunler: kalemListesi });
       }
     }
@@ -376,8 +380,7 @@ export default function BagisListesi({
             const kullanicininKendiKarti = bagis.id === kendiBagisId;
             const duzenlemeAcik = duzenlenenId === bagis.id;
             // Nakdi görünümde ve ürünsüz (yalnızca nakdi) bağışta TL tutarı gösterilir.
-            const tutarGorunur =
-              gorunum === "nakdi" || bagis.urunler.length === 0;
+            const tutarGorunur = gorunum === "nakdi";
             const tutar = bagis.toplam_tutar || bagis.nakdi_tutar || 0;
 
             return (
