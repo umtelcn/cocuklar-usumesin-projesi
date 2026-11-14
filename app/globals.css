@@ -1,26 +1,88 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-padding-top: 80px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background-color: #F4F8FB;
+  color: #1F2937;
+  min-height: 100vh;
+}
+
+@layer components {
+  .donation-panel {
+    background: #ffffff;
+    border: 1px solid rgb(226 232 240 / 85%);
+    border-radius: 20px;
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 3%),
+      0 8px 20px -4px rgb(15 23 42 / 5%);
+  }
+
+  .ui-focus:focus-visible {
+    outline: 2px solid #fb923c;
+    outline-offset: 3px;
+  }
+}
+
+.donation-amount {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.donation-amount::-webkit-inner-spin-button,
+.donation-amount::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+/*
+ * iOS Safari, yazı boyutu 16px'ten küçük alanlara odaklanınca sayfayı
+ * yakınlaştırır. Yalnızca iOS'ta (-webkit-touch-callout desteği) alan yazısı
+ * 16px yapılır; masaüstü ve Android görünümü değişmez. Yer tutucu metin
+ * küçük kalarak kompakt görünümü korur. Katmansız olduğu için Tailwind
+ * yardımcı sınıflarının (text-xs vb.) önüne geçer.
+ */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 14px;
+  }
+}
+
+@keyframes donation-basket-pop {
+  0% {
+    transform: scale(0.94) rotate(-5deg);
+  }
+
+  45% {
+    transform: scale(1.08) rotate(4deg);
+  }
+
+  75% {
+    transform: scale(0.99) rotate(-1deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+.basket-pop {
+  animation: donation-basket-pop 380ms ease-out;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .basket-pop {
+    animation: none;
+  }
 }
