@@ -238,7 +238,7 @@ function InstagramGonderiKarti({
   );
 }
 
-export default function Calismalarimiz() {
+export default function Calismalarimiz({ limit }: { limit?: number } = {}) {
   const [gonderiler, setGonderiler] = useState<DilekGonderisi[]>([]);
   const [yukleniyor, setYukleniyor] = useState(true);
 
@@ -251,7 +251,7 @@ export default function Calismalarimiz() {
         const { data, error } = await supabase
           .from("gerceklesen_dilekler")
           .select("*")
-          .order("sira", { ascending: true });
+          .order("sira", { ascending: true }).limit(limit ?? 50);
 
         if (error) throw error;
         if (data) setGonderiler(data);
