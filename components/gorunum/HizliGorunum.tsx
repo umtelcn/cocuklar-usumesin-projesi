@@ -29,8 +29,6 @@ const SEKMELER: Sekme<HizliSekme>[] = [
   { id: "hakkimizda", etiket: "Hakkımızda", ikon: faCircleInfo },
 ];
 
-const HIZLI_TUTARLAR = [250, 500, 1000, 2500];
-
 export default function HizliGorunum() {
   const [aktifSekme, setAktifSekme] = useState<HizliSekme>("bagis");
   const ilkSekmeyeDon = useCallback(() => setAktifSekme("bagis"), []);
@@ -63,7 +61,7 @@ export default function HizliGorunum() {
             {/* Üstte Sadece En Son Gönderimiz */}
             <Calismalarimiz limit={1} />
 
-            {/* Ortada Çok Şık ve Profesyonel Bağış Yap Kartı */}
+            {/* Ortada Sade ve Profesyonel Bağış Yap Kartı (Hazır Tutar Butonları Yok) */}
             <section
               aria-label="Bağış Yap"
               className="donation-panel relative overflow-hidden p-4 pb-5"
@@ -91,41 +89,18 @@ export default function HizliGorunum() {
                 </div>
               </div>
 
-              {/* Hızlı Tutar Seçim Butonları */}
-              <div className="mt-3.5 grid grid-cols-4 gap-2">
-                {HIZLI_TUTARLAR.map((tutar) => {
-                  const secili = akis.nakdiSayi === tutar;
-                  return (
-                    <button
-                      key={tutar}
-                      type="button"
-                      onClick={() =>
-                        akis.setNakdiTutar(secili ? "" : String(tutar))
-                      }
-                      className={`ui-focus h-9 cursor-pointer rounded-xl border text-xs font-bold tabular-nums transition-all ${
-                        secili
-                          ? "border-orange-400 bg-orange-50/70 text-orange-600 shadow-2xs"
-                          : "border-gray-200/90 bg-gray-50/80 text-gray-700 hover:border-orange-200 hover:bg-orange-50/30"
-                      }`}
-                    >
-                      {paraFormati.format(tutar)} ₺
-                    </button>
-                  );
-                })}
-              </div>
-
               {/* Serbest Tutar Giriş Kutusu */}
-              <div className="mt-3">
+              <div className="mt-3.5">
                 <label
                   htmlFor={tutarInputId}
-                  className="mb-1.5 block text-[11px] font-medium text-gray-500"
+                  className="mb-1.5 block text-xs font-medium text-gray-600"
                 >
-                  Veya dilediğiniz bağış tutarını yazın
+                  Bağış yapmak istediğiniz tutarı giriniz
                 </label>
                 <div className="relative">
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-bold text-orange-500"
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-orange-500"
                   >
                     ₺
                   </span>
@@ -137,7 +112,7 @@ export default function HizliGorunum() {
                     placeholder="0,00"
                     value={akis.nakdiTutar}
                     onChange={(e) => akis.setNakdiTutar(e.target.value)}
-                    className="donation-amount h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-4 text-base font-bold tabular-nums text-gray-800 placeholder:font-normal placeholder:text-gray-400 focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-100"
+                    className="donation-amount h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 text-lg font-bold tabular-nums text-gray-800 placeholder:font-normal placeholder:text-gray-400 focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
               </div>
