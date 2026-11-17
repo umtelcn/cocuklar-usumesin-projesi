@@ -1,0 +1,523 @@
+{
+  "guncellenme_tarihi": "2026-11-16 20:40:17",
+  "proje_url": "https://aoagoenbbsdhskebhmrq.supabase.co",
+  "storage_buckets": [
+    {
+      "name": "urun-gorselleri",
+      "public": true,
+      "created_at": "2025-07-10T13:45:25.817Z"
+    },
+    {
+      "name": "talep-gorselleri",
+      "public": true,
+      "created_at": "2025-07-15T23:14:39.463Z"
+    },
+    {
+      "name": "gorseler",
+      "public": true,
+      "created_at": "2026-08-14T12:33:15.004Z"
+    },
+    {
+      "name": "hikayeler",
+      "public": true,
+      "created_at": "2026-09-01T13:39:24.206Z"
+    }
+  ],
+  "rpc_functions": [
+    "goruntulenme_artir",
+    "site_ziyaret_artir"
+  ],
+  "tablolar": {
+    "bagis_detaylari": {
+      "kayit_sayisi": "17289",
+      "sutunlar": {
+        "id": {
+          "type": "bigint",
+          "required": true,
+          "primary_key": true,
+          "default": ""
+        },
+        "bagis_id": {
+          "type": "bigint",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "urun_id": {
+          "type": "bigint",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "adet": {
+          "type": "integer",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "o_anki_fiyat": {
+          "type": "integer",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        }
+      }
+    },
+    "bagis_gizli_bilgiler": {
+      "kayit_sayisi": "168",
+      "sutunlar": {
+        "bagis_id": {
+          "type": "bigint",
+          "required": true,
+          "primary_key": true,
+          "default": ""
+        },
+        "gercek_ad_soyad": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "required": true,
+          "primary_key": false,
+          "default": "now()"
+        }
+      }
+    },
+    "bagislar": {
+      "kayit_sayisi": "22929",
+      "sutunlar": {
+        "id": {
+          "type": "bigint",
+          "required": true,
+          "primary_key": true,
+          "default": ""
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "required": true,
+          "primary_key": false,
+          "default": "now()"
+        },
+        "ad_soyad": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "instagram_kullanici_adi": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "mesaj": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "nakdi_tutar": {
+          "type": "integer",
+          "required": true,
+          "primary_key": false,
+          "default": 0
+        },
+        "toplam_tutar": {
+          "type": "integer",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "is_anonymous": {
+          "type": "boolean",
+          "required": false,
+          "primary_key": false,
+          "default": false
+        }
+      }
+    },
+    "gerceklesen_dilekler": {
+      "kayit_sayisi": "5",
+      "sutunlar": {
+        "id": {
+          "type": "uuid",
+          "required": true,
+          "primary_key": true,
+          "default": "gen_random_uuid()"
+        },
+        "baslik": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "kisa_ozet": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "uzun_metin": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "kapak_gorseli": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "medya_url": {
+          "type": "text[]",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "required": false,
+          "primary_key": false,
+          "default": "now()"
+        },
+        "goruntulenme": {
+          "type": "integer",
+          "required": false,
+          "primary_key": false,
+          "default": 0
+        },
+        "sira": {
+          "type": "integer",
+          "required": false,
+          "primary_key": false,
+          "default": 0
+        },
+        "begeni_sayisi": {
+          "type": "integer",
+          "required": false,
+          "primary_key": false,
+          "default": 0
+        }
+      }
+    },
+    "iade_talepleri": {
+      "kayit_sayisi": "2",
+      "sutunlar": {
+        "id": {
+          "type": "uuid",
+          "required": true,
+          "primary_key": true,
+          "default": "gen_random_uuid()"
+        },
+        "ad_soyad": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "iban": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "tutar": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "mesaj": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "dekont_url": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "durum": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": "Bekliyor"
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "required": false,
+          "primary_key": false,
+          "default": "now()"
+        }
+      }
+    },
+    "ilceler": {
+      "kayit_sayisi": "973",
+      "sutunlar": {
+        "id": {
+          "type": "integer",
+          "required": true,
+          "primary_key": true,
+          "default": ""
+        },
+        "il_id": {
+          "type": "integer",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "ad": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        }
+      }
+    },
+    "iller": {
+      "kayit_sayisi": "84",
+      "sutunlar": {
+        "id": {
+          "type": "integer",
+          "required": true,
+          "primary_key": true,
+          "default": ""
+        },
+        "ad": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        }
+      }
+    },
+    "instagram_posts": {
+      "kayit_sayisi": "4",
+      "sutunlar": {
+        "id": {
+          "type": "bigint",
+          "required": true,
+          "primary_key": true,
+          "default": ""
+        },
+        "img_url": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "likes": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "post_url": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "is_active": {
+          "type": "boolean",
+          "required": false,
+          "primary_key": false,
+          "default": true
+        },
+        "display_order": {
+          "type": "integer",
+          "required": false,
+          "primary_key": false,
+          "default": 0
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "required": false,
+          "primary_key": false,
+          "default": "now()"
+        }
+      }
+    },
+    "profiles": {
+      "kayit_sayisi": "2",
+      "sutunlar": {
+        "id": {
+          "type": "uuid",
+          "required": true,
+          "primary_key": true,
+          "default": ""
+        },
+        "email": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "required": false,
+          "primary_key": false,
+          "default": "now()"
+        }
+      }
+    },
+    "sikca_sorulan_sorular": {
+      "kayit_sayisi": "7",
+      "sutunlar": {
+        "id": {
+          "type": "uuid",
+          "required": true,
+          "primary_key": true,
+          "default": "gen_random_uuid()"
+        },
+        "soru": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "cevap": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "sira": {
+          "type": "integer",
+          "required": false,
+          "primary_key": false,
+          "default": 0
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "required": false,
+          "primary_key": false,
+          "default": "now()"
+        }
+      }
+    },
+    "site_istatistikleri": {
+      "kayit_sayisi": "1",
+      "sutunlar": {
+        "id": {
+          "type": "integer",
+          "required": true,
+          "primary_key": true,
+          "default": ""
+        },
+        "toplam_ziyaret": {
+          "type": "integer",
+          "required": false,
+          "primary_key": false,
+          "default": 0
+        }
+      }
+    },
+    "urunler": {
+      "kayit_sayisi": "8",
+      "sutunlar": {
+        "id": {
+          "type": "bigint",
+          "required": true,
+          "primary_key": true,
+          "default": ""
+        },
+        "ad": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "fiyat": {
+          "type": "integer",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "gorsel_yolu": {
+          "type": "text",
+          "required": true,
+          "primary_key": false,
+          "default": ""
+        },
+        "aktif": {
+          "type": "boolean",
+          "required": true,
+          "primary_key": false,
+          "default": true
+        },
+        "sira": {
+          "type": "integer",
+          "required": true,
+          "primary_key": false,
+          "default": 0
+        }
+      }
+    },
+    "yardim_talepleri": {
+      "kayit_sayisi": "100",
+      "sutunlar": {
+        "id": {
+          "type": "bigint",
+          "required": true,
+          "primary_key": true,
+          "default": ""
+        },
+        "created_at": {
+          "type": "timestamp with time zone",
+          "required": true,
+          "primary_key": false,
+          "default": "timezone('utc'::text, now())"
+        },
+        "ad_soyad": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "telefon": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "il": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "ilce": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "mesaj": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "gorsel_yollari": {
+          "type": "text[]",
+          "required": false,
+          "primary_key": false,
+          "default": ""
+        },
+        "durum": {
+          "type": "text",
+          "required": false,
+          "primary_key": false,
+          "default": "Yeni Talep"
+        }
+      }
+    }
+  }
+}

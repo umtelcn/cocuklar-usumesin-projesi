@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+
+## Database Schema Reference
+- Full Supabase schema (all tables, column types, RPCs, and Storage buckets) is documented in `supabase/veritabani_semasi.md` and `supabase/veritabani_semasi.json`. Always check these files before writing database queries.

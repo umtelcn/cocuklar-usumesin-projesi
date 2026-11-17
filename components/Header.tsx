@@ -1,3 +1,4 @@
+import ZiyaretSayaci from "@/components/ZiyaretSayaci";
 import AnaSayfaBaglantisi from "@/components/AnaSayfaBaglantisi";
 import MaviTik from "@/components/ui/MaviTik";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -62,6 +63,7 @@ export default function Header() {
         </div>
 
       </div>
+      <ZiyaretSayaci />
     </header>
   );
 }

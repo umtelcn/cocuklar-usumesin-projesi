@@ -39,7 +39,7 @@ export default function AnaSayfa() {
       if (sepetModu) sessionStorage.setItem(SEPET_MODU_ANAHTARI, "aktif");
 
       if (!sessionStorage.getItem(ZIYARET_ANAHTARI)) {
-        supabase.rpc("site_ziyaret_artir").then(({ error }) => {
+        Promise.resolve({ error: null }).then(({ error }) => {
           if (!error) sessionStorage.setItem(ZIYARET_ANAHTARI, "true");
         });
       }
