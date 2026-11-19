@@ -32,9 +32,11 @@ function videoMu(url: string) {
 function InstagramGonderiKarti({
   gonderi,
   gradyanId,
+  onTumCalismalar,
 }: {
   gonderi: DilekGonderisi;
   gradyanId: string;
+  onTumCalismalar?: () => void;
 }) {
   const [aktifMedyaIndex, setAktifMedyaIndex] = useState(0);
   const [devamiAcik, setDevamiAcik] = useState(false);
@@ -238,7 +240,13 @@ function InstagramGonderiKarti({
   );
 }
 
-export default function Calismalarimiz({ limit }: { limit?: number } = {}) {
+export default function Calismalarimiz({
+  limit,
+  onTumCalismalar,
+}: {
+  limit?: number;
+  onTumCalismalar?: () => void;
+} = {}) {
   const [gonderiler, setGonderiler] = useState<DilekGonderisi[]>([]);
   const [yukleniyor, setYukleniyor] = useState(true);
 
@@ -295,6 +303,7 @@ export default function Calismalarimiz({ limit }: { limit?: number } = {}) {
               key={gonderi.id}
               gonderi={gonderi}
               gradyanId={gradyanId}
+              onTumCalismalar={onTumCalismalar}
             />
           ))}
         </div>

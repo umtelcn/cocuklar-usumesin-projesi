@@ -59,7 +59,7 @@ export default function HizliGorunum() {
         (akis.step === 0 ? (
           <div className="space-y-3">
             {/* Üstte Sadece En Son Gönderimiz */}
-            <Calismalarimiz limit={1} />
+            <Calismalarimiz limit={1} onTumCalismalar={() => { setAktifSekme("calismalar"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
 
             {/* Ortada Sade ve Profesyonel Bağış Yap Kartı (Hazır Tutar Butonları Yok) */}
             <section
