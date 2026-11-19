@@ -21,6 +21,23 @@ export function instagramTemizle(deger: unknown): string | null {
   return /^[A-Za-z0-9._]{1,30}$/.test(sade) ? sade : null;
 }
 
+/**
+ * Anonim bağışçı için herkese açık gösterim: yalnızca ad ve soyadın baş harfi.
+ * "Ahmet Can Yılmaz" → "A. Y.", "zeynep" → "Z."; harf yoksa ANONIM_AD.
+ */
+export function anonimBasHarfler(adSoyad: string): string {
+  const sade = adSoyad.trim();
+  if (sade === ANONIM_AD || sade === "Gizli Kahraman") return ANONIM_AD;
+  const parcalar = sade
+    .split(/\s+/)
+    .map((p) => p.match(/\p{L}/u)?.[0] ?? "")
+    .filter(Boolean);
+  if (parcalar.length === 0) return ANONIM_AD;
+  const secilen =
+    parcalar.length === 1 ? [parcalar[0]] : [parcalar[0], parcalar[parcalar.length - 1]];
+  return secilen.map((h) => `${h.toLocaleUpperCase("tr-TR")}.`).join(" ");
+}
+
 /** Herkese açık `bagislar` satırına yazılacak alanları üretir. */
 export function herkeseAcikAlanlar(girdi: {
   ad_soyad: string;
@@ -29,11 +46,26 @@ export function herkeseAcikAlanlar(girdi: {
   anonim: boolean;
 }) {
   return {
-    ad_soyad: girdi.anonim ? ANONIM_AD : girdi.ad_soyad || ANONIM_AD,
+    ad_soyad: girdi.anonim
+      ? anonimBasHarfler(girdi.ad_soyad)
+      : girdi.ad_soyad || ANONIM_AD,
     instagram_kullanici_adi: girdi.anonim ? null : girdi.instagram,
     mesaj: girdi.mesaj || null,
     is_anonymous: girdi.anonim,
   };
+}
+
+/** Gizli tablodaki gerçek adı okur; yoksa boş metin döner. */
+export async function gercekAdiGetir(
+  admin: SupabaseClient,
+  bagisId: number
+): Promise<string> {
+  const { data } = await admin
+    .from(GIZLI_TABLO)
+    .select("gercek_ad_soyad")
+    .eq("bagis_id", bagisId)
+    .maybeSingle();
+  return typeof data?.gercek_ad_soyad === "string" ? data.gercek_ad_soyad : "";
 }
 
 /**

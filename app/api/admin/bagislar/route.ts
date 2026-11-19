@@ -129,7 +129,8 @@ export async function PATCH(req: Request) {
     .from("bagislar")
     .update(
       herkeseAcikAlanlar({
-        ad_soyad: metin(govde.ad_soyad, AD_SOYAD_SINIRI),
+        // Anonimde herkese açık alana gerçek adın baş harfleri yazılır.
+        ad_soyad: (anonim && gercekAd) || metin(govde.ad_soyad, AD_SOYAD_SINIRI),
         instagram: instagramTemizle(govde.instagram_kullanici_adi),
         mesaj: metin(govde.mesaj, MESAJ_SINIRI),
         anonim,

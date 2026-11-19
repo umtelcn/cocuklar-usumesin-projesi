@@ -8,7 +8,6 @@ import { sonBagisSil, useSonBagis } from "@/lib/sonBagis";
 import { paraFormati } from "@/lib/format";
 import type { Urun } from "@/components/bagis/types";
 import {
-  faUser,
   faComment,
   faGift,
   faHandHoldingHeart,
@@ -17,6 +16,8 @@ import {
   faXmark,
   faSpinner,
   faShieldHalved,
+  faUser,
+  faHeart,
 } from "@fortawesome/free-solid-svg-icons";
 import { faInstagram } from "@fortawesome/free-brands-svg-icons";
 
@@ -58,6 +59,39 @@ const YENILEME_GECIKMESI_MS = 600;
 const BAGIS_ALANLARI =
   "id, ad_soyad, instagram_kullanici_adi, mesaj, is_anonymous, nakdi_tutar, toplam_tutar";
 const BOS_URUNLER: Urun[] = [];
+
+/** İsme göre her zaman aynı kalan yumuşak avatar renkleri. */
+const AVATAR_RENKLERI = [
+  "border-orange-100 bg-orange-50 text-orange-600",
+  "border-rose-100 bg-rose-50 text-rose-600",
+  "border-amber-100 bg-amber-50 text-amber-700",
+  "border-sky-100 bg-sky-50 text-sky-600",
+  "border-emerald-100 bg-emerald-50 text-emerald-600",
+  "border-violet-100 bg-violet-50 text-violet-600",
+];
+
+function avatarRengi(anahtar: string) {
+  let h = 0;
+  for (const c of anahtar) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return AVATAR_RENKLERI[h % AVATAR_RENKLERI.length];
+}
+
+/** "Ahmet Yılmaz" → "AY", "ahmet_yilmaz" → "AY", "zeynep" → "Z". */
+function basHarfler(ad: string) {
+  const parcalar = ad
+    .replace(/^@/, "")
+    .split(/[\s._-]+/)
+    .filter((p) => /[\p{L}\p{N}]/u.test(p));
+  return (
+    parcalar
+      .slice(0, 2)
+      .map((p) => (p.match(/[\p{L}\p{N}]/u)?.[0] ?? "").toLocaleUpperCase("tr-TR"))
+      .join("") || "?"
+  );
+}
+
+/** Eski kayıtlarda kalan genel anonim adlar (baş harf bilgisi yok). */
+const GENEL_ANONIM_ADLAR = new Set(["Anonim Bağışçı", "Gizli Kahraman", ""]);
 
 /** Ürün içeren son bağışları, kalemleriyle birlikte çeker. */
 async function urunBagislariniGetir(): Promise<HamBagis[]> {
@@ -192,7 +226,6 @@ export default function BagisListesi({
   const [formMesaj, setFormMesaj] = useState("");
   const [formAnonim, setFormAnonim] = useState(false);
   const [guncelleniyor, setGuncelleniyor] = useState(false);
-
   const benzersizId = useId().replace(/:/g, "");
   const gradyanId = `bagis-liste-gradyan-${benzersizId}`;
   const adAlanId = `bagis-duzenle-ad-${benzersizId}`;
@@ -262,7 +295,7 @@ export default function BagisListesi({
   const duzenlemeyiBaslat = (bagis: ListeBagisi) => {
     setDuzenlenenId(bagis.id);
     setFormAdSoyad(
-      bagis.ad_soyad === "Gizli Kahraman" || bagis.ad_soyad === "Anonim Bağışçı"
+      bagis.is_anonymous || GENEL_ANONIM_ADLAR.has(bagis.ad_soyad ?? "")
         ? ""
         : bagis.ad_soyad || ""
     );
@@ -382,45 +415,63 @@ export default function BagisListesi({
             // Nakdi görünümde ve ürünsüz (yalnızca nakdi) bağışta TL tutarı gösterilir.
             const tutarGorunur = gorunum === "nakdi";
             const tutar = bagis.toplam_tutar || bagis.nakdi_tutar || 0;
+            // Anonim bağışlarda sunucu yalnızca baş harfleri ("A. Y.") yazar.
+            const gorunenAd = bagis.is_anonymous
+              ? GENEL_ANONIM_ADLAR.has(bagis.ad_soyad?.trim() ?? "")
+                ? "Anonim Bağışçı"
+                : bagis.ad_soyad!.trim()
+              : instagramVar
+                ? `@${igKullanici}`
+                : bagis.ad_soyad || "Anonim Bağışçı";
 
             return (
               <li
                 key={bagis.id}
-                className="donation-panel flex flex-col gap-2.5 p-3.5 transition-all"
+                className={`donation-panel flex flex-col gap-2.5 p-3.5 transition-all ${
+                  kullanicininKendiKarti ? "ring-2 ring-orange-200" : ""
+                }`}
               >
-                {/* 1. SATIR: Üstte Solda İkon + Bağışçı İsmi */}
+                {/* 1. SATIR: Avatar + bağışçı adı, sağda tutar */}
                 <div className="flex w-full items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gray-100 bg-gray-50/80">
-                      <GradyenIkon
-                        icon={instagramVar ? faInstagram : faUser}
-                        className="h-4 w-4"
-                        gradyanId={gradyanId}
-                      />
+                    <div className="relative shrink-0">
+                      {bagis.is_anonymous ? (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-gray-50">
+                          <GradyenIkon icon={faUser} className="h-4 w-4" gradyanId={gradyanId} />
+                        </div>
+                      ) : (
+                        <div
+                          aria-hidden="true"
+                          className={`flex h-10 w-10 items-center justify-center rounded-full border text-[13px] font-extrabold ${avatarRengi(gorunenAd)}`}
+                        >
+                          {basHarfler(gorunenAd)}
+                        </div>
+                      )}
+                      {instagramVar && (
+                        <span className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border border-gray-100 bg-white shadow-sm">
+                          <GradyenIkon icon={faInstagram} className="h-2.5 w-2.5" gradyanId={gradyanId} />
+                        </span>
+                      )}
                     </div>
 
                     <div className="min-w-0">
-                      {bagis.is_anonymous ? (
-                        <span className="block truncate text-[13px] font-bold text-gray-800">
-                          Anonim Bağışçı
-                        </span>
-                      ) : instagramVar ? (
+                      {instagramVar ? (
                         <a
                           href={"https://instagram.com/" + igKullanici}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="block truncate text-[13px] font-bold text-gray-800 transition-colors hover:text-gray-600"
                         >
-                          @{igKullanici}
+                          {gorunenAd}
                         </a>
                       ) : (
                         <span className="block truncate text-[13px] font-bold text-gray-800">
-                          {bagis.ad_soyad || "Anonim Bağışçı"}
+                          {gorunenAd}
                         </span>
                       )}
 
                       {kullanicininKendiKarti && (
-                        <span className="block text-[10px] font-medium text-gray-400">
+                        <span className="mt-0.5 inline-block rounded-full bg-orange-50 px-1.5 py-px text-[10px] font-bold text-orange-600 ring-1 ring-orange-200">
                           Sizin bağışınız
                         </span>
                       )}
@@ -429,27 +480,28 @@ export default function BagisListesi({
 
                   {/* Sağ: (kendi kartıysa) Düzenle butonu ve (varsa) TL tutarı */}
                   <div className="flex shrink-0 items-center gap-2">
-                  {kullanicininKendiKarti && !duzenlemeAcik && (
-                    <button
-                      type="button"
-                      onClick={() => duzenlemeyiBaslat(bagis)}
-                      aria-label="Bağış bilgilerini düzenle"
-                      className="ui-focus inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-gray-700 transition-colors hover:bg-gray-100"
-                    >
-                      <GradyenIkon
-                        icon={faPenToSquare}
-                        className="h-3.5 w-3.5"
-                        gradyanId={gradyanId}
-                      />
-                      <span>Düzenle</span>
-                    </button>
-                  )}
+                    {kullanicininKendiKarti && !duzenlemeAcik && (
+                      <button
+                        type="button"
+                        onClick={() => duzenlemeyiBaslat(bagis)}
+                        aria-label="Bağış bilgilerini düzenle"
+                        className="ui-focus inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-gray-700 transition-colors hover:bg-gray-100"
+                      >
+                        <GradyenIkon
+                          icon={faPenToSquare}
+                          className="h-3.5 w-3.5"
+                          gradyanId={gradyanId}
+                        />
+                        <span>Düzenle</span>
+                      </button>
+                    )}
 
-                  {tutarGorunur && (
-                    <span className="inline-flex items-center rounded-lg border border-emerald-200/70 bg-emerald-50/80 px-2.5 py-1 text-xs font-bold tabular-nums text-emerald-700">
-                      {paraFormati.format(tutar)} ₺
-                    </span>
-                  )}
+                    {tutarGorunur && (
+                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-orange-500 to-red-500 py-1 pl-2 pr-2.5 text-[13px] font-extrabold tabular-nums text-white shadow-sm shadow-orange-500/25">
+                        <FontAwesomeIcon icon={faHeart} className="text-[10px] text-white/90" />
+                        {paraFormati.format(tutar)} ₺
+                      </span>
+                    )}
                   </div>
                 </div>
 

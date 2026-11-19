@@ -109,7 +109,7 @@ export default function HizliGorunum() {
                     type="number"
                     inputMode="numeric"
                     min="1"
-                    placeholder="0,00"
+                    placeholder="0"
                     value={akis.nakdiTutar}
                     onChange={(e) => akis.setNakdiTutar(e.target.value)}
                     className="donation-amount h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 text-lg font-bold tabular-nums text-gray-800 placeholder:font-normal placeholder:text-gray-400 focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-100"
@@ -117,27 +117,24 @@ export default function HizliGorunum() {
                 </div>
               </div>
 
-              {/* Alt Toplam ve Ödemeye Geç Satırı */}
-              <div className="mt-4 flex items-center justify-between gap-3 border-t border-gray-100 pt-3.5">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                    Bağış Tutarı
-                  </p>
-                  <p className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-[22px] font-extrabold leading-7 tracking-tight text-transparent tabular-nums">
-                    {paraFormati.format(akis.genelToplam)} ₺
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => akis.adimaGit(1)}
-                  disabled={!odemeyeGecilebilir}
-                  className="ui-focus flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-5 text-xs font-bold text-white shadow-sm shadow-orange-500/20 transition-colors hover:from-orange-600 hover:to-red-600 disabled:cursor-not-allowed disabled:from-gray-100 disabled:to-gray-100 disabled:text-gray-400 disabled:shadow-none sm:text-[13px]"
-                >
-                  <span>Ödemeye Geç</span>
-                  <FontAwesomeIcon icon={faArrowRight} className="text-[10px]" />
-                </button>
-              </div>
+              {/* Tutar butonun içinde: tek ve net bir eylem */}
+              <button
+                type="button"
+                onClick={() => akis.adimaGit(1)}
+                disabled={!odemeyeGecilebilir}
+                className="ui-focus mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-5 text-sm font-bold text-white shadow-sm shadow-orange-500/20 transition-colors hover:from-orange-600 hover:to-red-600 disabled:cursor-not-allowed disabled:from-gray-100 disabled:to-gray-100 disabled:text-gray-400 disabled:shadow-none"
+              >
+                {odemeyeGecilebilir ? (
+                  <>
+                    <span className="tabular-nums">
+                      {paraFormati.format(akis.genelToplam)} ₺ Bağış Yap
+                    </span>
+                    <FontAwesomeIcon icon={faArrowRight} className="text-[11px]" />
+                  </>
+                ) : (
+                  <span>Bağış tutarını giriniz</span>
+                )}
+              </button>
 
               <div
                 aria-hidden="true"

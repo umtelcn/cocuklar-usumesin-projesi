@@ -4,6 +4,7 @@ import { duzenlemeTokeniGecerliMi } from "@/lib/server/duzenlemeToken";
 import {
   AD_SOYAD_SINIRI,
   MESAJ_SINIRI,
+  gercekAdiGetir,
   gercekAdiSakla,
   herkeseAcikAlanlar,
   instagramTemizle,
@@ -44,11 +45,14 @@ export async function POST(req: Request) {
   const anonim = govde.is_anonymous === true;
 
   try {
+    // Anonimde ad alanı kapalı gelir; baş harfler gizli kayıttaki addan üretilir.
+    const acikAd = anonim && !adSoyad ? await gercekAdiGetir(admin, bagisId) : adSoyad;
+
     const { data, error } = await admin
       .from("bagislar")
       .update(
         herkeseAcikAlanlar({
-          ad_soyad: adSoyad,
+          ad_soyad: acikAd,
           instagram: instagramTemizle(govde.instagram_kullanici_adi),
           mesaj: metinTemizle(govde.mesaj, MESAJ_SINIRI),
           anonim,
