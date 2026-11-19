@@ -413,8 +413,9 @@ export default function BagisListesi({
             const kullanicininKendiKarti = bagis.id === kendiBagisId;
             const duzenlemeAcik = duzenlenenId === bagis.id;
             // Nakdi görünümde ve ürünsüz (yalnızca nakdi) bağışta TL tutarı gösterilir.
-            const tutarGorunur = gorunum === "nakdi";
             const tutar = bagis.toplam_tutar || bagis.nakdi_tutar || 0;
+            // Tutarsız (serbest) bağışta "0 ₺" yerine rozet gizlenir.
+            const tutarGorunur = gorunum === "nakdi" && tutar > 0;
             // Anonim bağışlarda sunucu yalnızca baş harfleri ("A. Y.") yazar.
             const gorunenAd = bagis.is_anonymous
               ? GENEL_ANONIM_ADLAR.has(bagis.ad_soyad?.trim() ?? "")

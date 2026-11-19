@@ -6,6 +6,39 @@ import { ANA_SAYFA_OLAYI } from "@/lib/olaylar";
 /** 0: Tutar/Sepet, 1: Ödeme, 2: Bilgileriniz, 3: Teşekkür */
 export type BagisAdimi = 0 | 1 | 2 | 3;
 
+/** Tutar kutusunda yalnızca rakam, nokta ve virgüle izin verir. */
+export function tutarGirdisiTemizle(deger: string): string {
+  return deger.replace(/[^\d.,]/g, "");
+}
+
+/**
+ * "1.000", "500,00", "1.250,50", "1000.5" gibi girişleri sayıya çevirir.
+ * Virgül varsa ondalık ayırıcıdır (noktalar binlik); yalnızca nokta varsa
+ * 3'lü gruplar binlik, aksi hâlde son nokta ondalık sayılır.
+ * Geçersiz veya boş girişte 0 döner.
+ */
+export function tutarCoz(deger: string): number {
+  let metin = tutarGirdisiTemizle(deger);
+  if (!metin) return 0;
+  if (metin.includes(",")) {
+    const son = metin.lastIndexOf(",");
+    metin =
+      metin.slice(0, son).replace(/[.,]/g, "") +
+      "." +
+      metin.slice(son + 1).replace(/[.,]/g, "");
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(metin)) {
+    metin = metin.replace(/\./g, "");
+  } else {
+    const son = metin.lastIndexOf(".");
+    if (son !== -1) {
+      metin =
+        metin.slice(0, son).replace(/\./g, "") + "." + metin.slice(son + 1);
+    }
+  }
+  const sayi = Number(metin);
+  return Number.isFinite(sayi) && sayi > 0 ? sayi : 0;
+}
+
 function yukariKaydir() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -53,7 +86,7 @@ export function useBagisAkisi({
     (toplam, u) => toplam + u.fiyat * (sepet[u.id] || 0),
     0
   );
-  const hamNakdi = Number(nakdiTutar) || 0;
+  const hamNakdi = tutarCoz(nakdiTutar);
   const nakdiSayi = nakdiTamSayi ? Math.round(hamNakdi) : hamNakdi;
   const genelToplam = urunlerToplami + nakdiSayi;
 

@@ -129,10 +129,23 @@ export default function OdemeAdimi({
 
       {/* TUTAR */}
       <div className="px-4 pb-4 pt-2 text-center">
-        <p className="text-xs font-medium text-gray-500">Göndereceğiniz tutar</p>
-        <p className="mt-1 bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-[32px] font-extrabold leading-9 tracking-tight text-transparent tabular-nums">
-          {paraFormati.format(genelToplam)} ₺
-        </p>
+        {genelToplam > 0 ? (
+          <>
+            <p className="text-xs font-medium text-gray-500">Göndereceğiniz tutar</p>
+            <p className="mt-1 bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-[32px] font-extrabold leading-9 tracking-tight text-transparent tabular-nums">
+              {paraFormati.format(genelToplam)} ₺
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-[28px] font-extrabold leading-9 tracking-tight text-transparent">
+              Serbest Bağış
+            </p>
+            <p className="mx-auto mt-1 max-w-[260px] text-xs leading-[18px] text-gray-500">
+              Banka uygulamanızdan dilediğiniz tutarda gönderim yapabilirsiniz
+            </p>
+          </>
+        )}
 
         {dokumGoster && (
           <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">

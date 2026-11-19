@@ -13,6 +13,7 @@ import {
   faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { Urun } from "./types";
+import { tutarCoz, tutarGirdisiTemizle } from "@/lib/useBagisAkisi";
 
 interface SepetAdimiProps {
   urunler: Urun[];
@@ -58,22 +59,11 @@ export default function SepetAdimi({
     0
   );
 
-  const nakdiDeger = Number(nakdiTutar);
-  const nakdiDestekVar =
-    Number.isFinite(nakdiDeger) && nakdiDeger > 0;
-
-  const odemeyeGecilebilir =
-    Number.isFinite(genelToplam) && genelToplam > 0;
+  const nakdiDeger = tutarCoz(nakdiTutar);
+  const nakdiDestekVar = nakdiDeger > 0;
 
   const nakdiTutariDegistir = (deger: string) => {
-    const sayi = Number(deger);
-
-    if (
-      deger === "" ||
-      (Number.isFinite(sayi) && sayi >= 0)
-    ) {
-      setNakdiTutar(deger);
-    }
+    setNakdiTutar(tutarGirdisiTemizle(deger));
   };
 
   return (
@@ -344,10 +334,9 @@ export default function SepetAdimi({
 
             <input
               id={nakdiInputId}
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
               placeholder="0,00"
               value={nakdiTutar}
               aria-describedby={nakdiAciklamaId}
@@ -423,8 +412,7 @@ export default function SepetAdimi({
           <button
             type="button"
             onClick={ileriGit}
-            disabled={!odemeyeGecilebilir}
-            className="ui-focus flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-3.5 text-xs font-bold text-white shadow-sm shadow-orange-500/20 transition-colors hover:from-orange-600 hover:to-red-600 disabled:cursor-not-allowed disabled:from-gray-100 disabled:to-gray-100 disabled:text-gray-400 disabled:shadow-none motion-reduce:transition-none min-[380px]:px-4 min-[380px]:text-[13px]"
+            className="ui-focus flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-3.5 text-xs font-bold text-white shadow-sm shadow-orange-500/20 transition-colors hover:from-orange-600 hover:to-red-600 motion-reduce:transition-none min-[380px]:px-4 min-[380px]:text-[13px]"
           >
             <span>Ödemeye Geç</span>
 

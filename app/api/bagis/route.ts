@@ -104,8 +104,8 @@ export async function POST(req: Request) {
       }
     }
 
+    // Tutar belirtilmeden yapılan serbest bağışlar 0 ₺ ile kaydedilir.
     const toplamTutar = urunlerToplami + nakdiTutar;
-    if (toplamTutar <= 0) return hata("Bağış tutarı sıfır olamaz.", 400);
 
     const { data: bagis, error: bagisHata } = await admin
       .from("bagislar")

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useId, useState } from "react";
-import { useBagisAkisi } from "@/lib/useBagisAkisi";
+import { tutarGirdisiTemizle, useBagisAkisi } from "@/lib/useBagisAkisi";
 import SekmeMenusu, { type Sekme } from "@/components/SekmeMenusu";
 import BagisAdimlari from "@/components/bagis/BagisAdimlari";
 import IadeTalebi from "@/components/IadeTalebi";
@@ -38,7 +38,7 @@ export default function HizliGorunum() {
   const gradyanId = `hizli-bagis-gradyan-${benzersizId}`;
   const tutarInputId = `hizli-tutar-${benzersizId}`;
 
-  const odemeyeGecilebilir = akis.genelToplam > 0;
+  const tutarVar = akis.genelToplam > 0;
 
   return (
     <div className="w-full space-y-3 pb-10">
@@ -106,12 +106,14 @@ export default function HizliGorunum() {
                   </span>
                   <input
                     id={tutarInputId}
-                    type="number"
+                    type="text"
                     inputMode="numeric"
-                    min="1"
+                    autoComplete="off"
                     placeholder="0"
                     value={akis.nakdiTutar}
-                    onChange={(e) => akis.setNakdiTutar(e.target.value)}
+                    onChange={(e) =>
+                      akis.setNakdiTutar(tutarGirdisiTemizle(e.target.value))
+                    }
                     className="donation-amount h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 text-lg font-bold tabular-nums text-gray-800 placeholder:font-normal placeholder:text-gray-400 focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
@@ -121,19 +123,14 @@ export default function HizliGorunum() {
               <button
                 type="button"
                 onClick={() => akis.adimaGit(1)}
-                disabled={!odemeyeGecilebilir}
-                className="ui-focus mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-5 text-sm font-bold text-white shadow-sm shadow-orange-500/20 transition-colors hover:from-orange-600 hover:to-red-600 disabled:cursor-not-allowed disabled:from-gray-100 disabled:to-gray-100 disabled:text-gray-400 disabled:shadow-none"
+                className="ui-focus mt-4 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-5 text-sm font-bold text-white shadow-sm shadow-orange-500/20 transition-colors hover:from-orange-600 hover:to-red-600"
               >
-                {odemeyeGecilebilir ? (
-                  <>
-                    <span className="tabular-nums">
-                      {paraFormati.format(akis.genelToplam)} ₺ Bağış Yap
-                    </span>
-                    <FontAwesomeIcon icon={faArrowRight} className="text-[11px]" />
-                  </>
-                ) : (
-                  <span>Bağış tutarını giriniz</span>
-                )}
+                <span className="tabular-nums">
+                  {tutarVar
+                    ? `${paraFormati.format(akis.genelToplam)} ₺ · Ödemeye Geç`
+                    : "Ödemeye Geç"}
+                </span>
+                <FontAwesomeIcon icon={faArrowRight} className="text-[11px]" />
               </button>
 
               <div
