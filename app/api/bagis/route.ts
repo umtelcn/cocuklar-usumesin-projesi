@@ -42,7 +42,7 @@ function sepetiCoz(deger: unknown): [number, number][] | null {
 
 /**
  * Bağışı sunucuda kaydeder: fiyatlar veritabanından okunur, toplam burada
- * hesaplanır, gerçek ad gizli tabloya yazılır ve bağışçıya 30 dakika geçerli
+ * hesaplanır, gerçek ad gizli tabloya yazılır ve bağışçıya 24 saat geçerli
  * imzalı bir düzenleme token'ı döner.
  */
 export async function POST(req: Request) {

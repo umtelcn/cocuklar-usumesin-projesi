@@ -45,7 +45,7 @@ function yukariKaydir() {
 
 /**
  * `/` (hızlı nakdi bağış) ve `/destek` (kataloglu sepet) görünümlerinin ortak
- * bağış akışı: adımlar, sepet, bağışçı formu, `/api/bagis` kaydı ve 30 dakika
+ * bağış akışı: adımlar, sepet, bağışçı formu, `/api/bagis` kaydı ve 24 saat
  * geçerli düzenleme token'ının `localStorage`'a yazılması tek yerden yönetilir.
  */
 export function useBagisAkisi({
@@ -115,7 +115,7 @@ export function useBagisAkisi({
     setKaydediliyor(true);
     try {
       // Kayıt sunucuda yapılır: fiyatlar ve toplam orada hesaplanır,
-      // yanıtta 30 dakika geçerli HMAC imzalı düzenleme token'ı gelir.
+      // yanıtta 24 saat geçerli HMAC imzalı düzenleme token'ı gelir.
       const yanit = await fetch("/api/bagis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

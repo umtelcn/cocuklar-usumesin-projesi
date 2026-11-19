@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-/** Bağışçının kendi kartını düzenleyebildiği süre. */
-export const DUZENLEME_SURESI_MS = 30 * 60 * 1000;
+/** Bağışçının kendi kartını düzenleyebildiği süre (24 saat). */
+export const DUZENLEME_SURESI_MS = 24 * 60 * 60 * 1000;
 
 function gizliAnahtar(): string {
   const anahtar =
@@ -20,7 +20,7 @@ function imzala(bagisId: number, bitis: number): string {
     .digest("base64url");
 }
 
-/** `id + bitiş zamanı` üzerinden HMAC imzalı, 30 dakika geçerli token üretir. */
+/** `id + bitiş zamanı` üzerinden HMAC imzalı, 24 saat geçerli token üretir. */
 export function duzenlemeTokeniUret(bagisId: number) {
   const bitis = Date.now() + DUZENLEME_SURESI_MS;
   return { token: `${bitis}.${imzala(bagisId, bitis)}`, bitis };

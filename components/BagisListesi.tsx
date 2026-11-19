@@ -4,7 +4,7 @@ import { useState, useEffect, useId, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import GradyenIkon, { GradyanTanimi } from "@/components/ui/GradyenIkon";
-import { sonBagisSil, useSonBagis } from "@/lib/sonBagis";
+import { sonBagisSil, useSonBagislar } from "@/lib/sonBagis";
 import { paraFormati } from "@/lib/format";
 import type { Urun } from "@/components/bagis/types";
 import {
@@ -153,39 +153,46 @@ async function tumBagislariGetir(): Promise<HamBagis[]> {
   return (data ?? []).map((k) => ({ ...k, id: Number(k.id), kalemler: [] }));
 }
 
-/** Tek bir bağışı (kullanıcının kendi bağışı) kalemleriyle birlikte çeker. */
-async function tekBagisGetir(bagisId: number): Promise<HamBagis | null> {
-  const { data: kisi, error: kisiHata } = await supabase
-    .from("bagislar")
-    .select(BAGIS_ALANLARI)
-    .eq("id", bagisId)
-    .maybeSingle();
-  if (kisiHata) throw kisiHata;
-  if (!kisi) return null;
+/** Kullanıcının kendi bağışlarını (id listesiyle) kalemleriyle birlikte çeker. */
+async function kendiBagislariniGetir(bagisIdleri: number[]): Promise<HamBagis[]> {
+  if (bagisIdleri.length === 0) return [];
 
-  const { data: detaylar, error: detayHata } = await supabase
-    .from("bagis_detaylari")
-    .select("urun_id, adet")
-    .eq("bagis_id", bagisId);
-  if (detayHata) throw detayHata;
+  const [kisiSonucu, detaySonucu] = await Promise.all([
+    supabase.from("bagislar").select(BAGIS_ALANLARI).in("id", bagisIdleri),
+    supabase
+      .from("bagis_detaylari")
+      .select("bagis_id, urun_id, adet")
+      .in("bagis_id", bagisIdleri),
+  ]);
+  if (kisiSonucu.error) throw kisiSonucu.error;
+  if (detaySonucu.error) throw detaySonucu.error;
 
-  return {
-    ...kisi,
-    id: Number(kisi.id),
-    kalemler: (detaylar ?? [])
-      .map((d) => ({ urun_id: Number(d.urun_id), adet: Number(d.adet) }))
-      .filter((d) => d.adet > 0),
-  };
+  const kalemHaritasi = new Map<number, HamBagis["kalemler"]>();
+  for (const d of detaySonucu.data ?? []) {
+    const adet = Number(d.adet);
+    if (!(adet > 0)) continue;
+    const bId = Number(d.bagis_id);
+    const mevcut = kalemHaritasi.get(bId) ?? [];
+    mevcut.push({ urun_id: Number(d.urun_id), adet });
+    kalemHaritasi.set(bId, mevcut);
+  }
+
+  return (kisiSonucu.data ?? []).map((k) => ({
+    ...k,
+    id: Number(k.id),
+    kalemler: kalemHaritasi.get(Number(k.id)) ?? [],
+  }));
 }
 
 /**
- * Görünüme uygun son bağışları çeker. Kullanıcının kendi bağışı listede
- * yoksa (ör. `/destek`te yalnızca nakdi bağış) ayrıca eklenir; böylece her iki
- * sayfada da düzenlenebilir. Hata olursa null döner (mevcut liste korunur).
+ * Görünüme uygun son bağışları çeker. Kullanıcının son 24 saatteki kendi
+ * bağışları, son 15'in dışına düşmüş olsalar bile veritabanından ayrıca
+ * çekilip listeye eklenir; böylece her iki sayfada da görünür ve
+ * düzenlenebilir kalırlar. Hata olursa null döner (mevcut liste korunur).
  */
 async function sonBagislariGetir(
   gorunum: BagisListesiGorunumu,
-  kendiBagisId: number | null
+  kendiBagisIdleri: number[]
 ): Promise<HamBagis[] | null> {
   try {
     const liste =
@@ -193,10 +200,10 @@ async function sonBagislariGetir(
         ? await urunBagislariniGetir()
         : await tumBagislariGetir();
 
-    if (kendiBagisId && !liste.some((b) => b.id === kendiBagisId)) {
-      const kendi = await tekBagisGetir(kendiBagisId);
-      if (kendi) liste.unshift(kendi);
-    }
+    const eksikIdler = kendiBagisIdleri.filter(
+      (id) => !liste.some((b) => b.id === id)
+    );
+    liste.push(...(await kendiBagislariniGetir(eksikIdler)));
     return liste;
   } catch (err) {
     console.warn("Bağışlar çekilirken hata:", err);
@@ -217,8 +224,14 @@ export default function BagisListesi({
   const [hamBagislar, setHamBagislar] = useState<HamBagis[]>([]);
   const [yukleniyor, setYukleniyor] = useState(true);
 
-  const sonBagis = useSonBagis();
-  const kendiBagisId = sonBagis?.id ?? null;
+  const kendiBagislarim = useSonBagislar();
+  // Efekt bağımlılığı için kararlı anahtar: "12,9,4" gibi.
+  const kendiIdAnahtari = kendiBagislarim.map((k) => k.id).join(",");
+  const kendiBagisIdleri = useMemo(
+    () => (kendiIdAnahtari ? kendiIdAnahtari.split(",").map(Number) : []),
+    [kendiIdAnahtari]
+  );
+  const kendiBagisiMi = (id: number) => kendiBagisIdleri.includes(id);
 
   const [duzenlenenId, setDuzenlenenId] = useState<number | null>(null);
   const [formAdSoyad, setFormAdSoyad] = useState("");
@@ -237,7 +250,7 @@ export default function BagisListesi({
     let zamanlayici: ReturnType<typeof setTimeout> | undefined;
 
     const getir = () => {
-      sonBagislariGetir(gorunum, kendiBagisId).then((sonuc) => {
+      sonBagislariGetir(gorunum, kendiBagisIdleri).then((sonuc) => {
         if (iptal) return;
         // Geçici hatada eldeki liste silinmez.
         if (sonuc) setHamBagislar(sonuc);
@@ -266,7 +279,7 @@ export default function BagisListesi({
       clearTimeout(zamanlayici);
       supabase.removeChannel(kanal);
     };
-  }, [gorunum, kendiBagisId]);
+  }, [gorunum, kendiBagisIdleri]);
 
   const bagislar = useMemo<ListeBagisi[]>(() => {
     const urunAdlari = new Map(urunler.map((u) => [Number(u.id), u.ad]));
@@ -277,20 +290,21 @@ export default function BagisListesi({
         const ad = urunAdlari.get(kalem.urun_id);
         if (ad) kalemListesi.push({ adet: kalem.adet, ad });
       }
-      // Ürün görünümünde ürünsüz kayıtlardan yalnızca kullanıcının kendi
-      // (nakdi) bağışı gösterilir; nakdi görünümde ürün rozeti çizilmez.
+      // Nakdi görünümde ürün rozeti çizilmez. Ürün görünümünde ürünsüz ve
+      // tutarsız kayıtlar gizlenir; kullanıcının kendi bağışı ise hiçbir
+      // koşulda gizlenmez.
       if (gorunum === "nakdi") {
         liste.push({ ...kisi, urunler: [] });
       } else if (
         kalemListesi.length > 0 ||
         (kisi.nakdi_tutar ?? 0) > 0 ||
-        kisi.id === kendiBagisId
+        kendiBagisIdleri.includes(kisi.id)
       ) {
         liste.push({ ...kisi, urunler: kalemListesi });
       }
     }
     return liste;
-  }, [hamBagislar, urunler, gorunum, kendiBagisId]);
+  }, [hamBagislar, urunler, gorunum, kendiBagisIdleri]);
 
   const duzenlemeyiBaslat = (bagis: ListeBagisi) => {
     setDuzenlenenId(bagis.id);
@@ -305,7 +319,8 @@ export default function BagisListesi({
   };
 
   const degisiklikleriKaydet = async (bagisId: number) => {
-    if (!sonBagis || sonBagis.id !== bagisId) {
+    const kayit = kendiBagislarim.find((k) => k.id === bagisId);
+    if (!kayit) {
       alert("Bu bağışı düzenleme süreniz dolmuş.");
       setDuzenlenenId(null);
       return;
@@ -318,7 +333,7 @@ export default function BagisListesi({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: bagisId,
-          token: sonBagis.token,
+          token: kayit.token,
           ad_soyad: formAdSoyad,
           instagram_kullanici_adi: formInstagram,
           mesaj: formMesaj,
@@ -331,9 +346,9 @@ export default function BagisListesi({
         .catch(() => ({}));
 
       if (yanit.status === 403) {
-        sonBagisSil();
+        sonBagisSil(bagisId);
         setDuzenlenenId(null);
-        alert("Düzenleme süreniz (30 dakika) dolmuş.");
+        alert("Düzenleme süreniz (24 saat) dolmuş.");
         return;
       }
       if (!yanit.ok || !sonuc.data) {
@@ -363,11 +378,12 @@ export default function BagisListesi({
     }
   };
 
-  const siraliBagislar = [...bagislar].sort((a, b) => {
-    if (a.id === kendiBagisId) return -1;
-    if (b.id === kendiBagisId) return 1;
-    return 0;
-  });
+  // Kullanıcının kendi bağışları (yeniden eskiye) her zaman en üstte;
+  // diğerleri gelen sırayı korur.
+  const siraliBagislar = [
+    ...bagislar.filter((b) => kendiBagisiMi(b.id)).sort((a, b) => b.id - a.id),
+    ...bagislar.filter((b) => !kendiBagisiMi(b.id)),
+  ];
 
   return (
     <section aria-label="İyilik Hareketimiz" className="w-full pt-8 pb-6">
@@ -410,7 +426,7 @@ export default function BagisListesi({
               ?.replace("@", "")
               .trim();
             const instagramVar = !bagis.is_anonymous && Boolean(igKullanici);
-            const kullanicininKendiKarti = bagis.id === kendiBagisId;
+            const kullanicininKendiKarti = kendiBagisiMi(bagis.id);
             const duzenlemeAcik = duzenlenenId === bagis.id;
             // Nakdi görünümde ve ürünsüz (yalnızca nakdi) bağışta TL tutarı gösterilir.
             const tutar = bagis.toplam_tutar || bagis.nakdi_tutar || 0;
