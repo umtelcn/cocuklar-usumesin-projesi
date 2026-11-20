@@ -45,6 +45,9 @@ export async function POST(req: Request) {
 
     const yeni: Partial<DmAyarlar> = {};
     if (typeof govde.aktif === "boolean") yeni.aktif = govde.aktif;
+    if (typeof govde.model === "string" && /^[\w.\-/:]{1,120}$/.test(govde.model.trim())) {
+      yeni.model = govde.model.trim();
+    }
     if (govde.gecikme_saniye !== undefined) yeni.gecikme_saniye = Number(govde.gecikme_saniye);
     if (typeof govde.guncel_durum === "string") yeni.guncel_durum = govde.guncel_durum.slice(0, 3000);
     if (typeof govde.sistem_talimati === "string") yeni.sistem_talimati = govde.sistem_talimati.slice(0, 10000);

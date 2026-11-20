@@ -31,6 +31,7 @@ const WEBHOOK_URL = "https://cocuklarusumesindestek.com/api/instagram-webhook";
 type Ayarlar = {
   aktif: boolean;
   gecikme_saniye: number;
+  model: string;
   openrouter_api_key: string;
   instagram_access_token: string;
   instagram_verify_token: string;
@@ -58,6 +59,172 @@ const DURUM_ROZETI: Record<Kayit["durum"], { etiket: string; sinif: string }> = 
   test: { etiket: "Test", sinif: "bg-sky-50 text-sky-700 border-sky-100" },
   hata: { etiket: "Hata", sinif: "bg-red-50 text-red-600 border-red-100" },
 };
+
+type Model = {
+  id: string;
+  ad: string;
+  baglam: number | null;
+  girdi_fiyat: number | null;
+  cikti_fiyat: number | null;
+  ucretsiz: boolean;
+};
+
+const ONERILEN_MODELLER = [
+  "google/gemini-2.5-flash",
+  "google/gemini-2.5-flash-lite",
+  "openai/gpt-4o-mini",
+  "anthropic/claude-haiku-4.5",
+  "deepseek/deepseek-chat-v3.1",
+];
+
+function fiyatMetni(m: Model): string {
+  if (m.ucretsiz) return "Ücretsiz";
+  if (m.girdi_fiyat === null || m.cikti_fiyat === null) return "Fiyat bilinmiyor";
+  return `$${m.girdi_fiyat} / $${m.cikti_fiyat} (1M token girdi/çıktı)`;
+}
+
+/** OpenRouter'dan dinamik çekilen modeller arasından aranabilir seçim. */
+function ModelSecici({ secili, sec }: { secili: string; sec: (id: string) => void }) {
+  const [modeller, setModeller] = useState<Model[] | null>(null);
+  const [yukleniyor, setYukleniyor] = useState(true);
+  const [hata, setHata] = useState<string | null>(null);
+  const [arama, setArama] = useState("");
+  const [acik, setAcik] = useState(false);
+  const [sadeceUcretsiz, setSadeceUcretsiz] = useState(false);
+
+  const [yenileSayaci, setYenileSayaci] = useState(0);
+
+  // Açılışta ve "Listeyi Yenile" ile çekilir; bileşen kapanırsa yanıt yok sayılır.
+  useEffect(() => {
+    let iptal = false;
+    adminIstek<{ data: Model[] }>("dm-models")
+      .then(
+        ({ data }) => {
+          if (iptal) return;
+          setModeller(data);
+          setHata(null);
+        },
+        (err) => {
+          if (!iptal) setHata(hataMesaji(err));
+        }
+      )
+      .finally(() => {
+        if (!iptal) setYukleniyor(false);
+      });
+    return () => {
+      iptal = true;
+    };
+  }, [yenileSayaci]);
+
+  const getir = () => {
+    setYukleniyor(true);
+    setHata(null);
+    setYenileSayaci((n) => n + 1);
+  };
+
+  const seciliModel = modeller?.find((m) => m.id === secili);
+  const terim = arama.trim().toLocaleLowerCase("tr");
+  const filtreli = (modeller ?? [])
+    .filter((m) => !sadeceUcretsiz || m.ucretsiz)
+    .filter((m) => !terim || m.id.toLowerCase().includes(terim) || m.ad.toLocaleLowerCase("tr").includes(terim))
+    .sort((a, b) => {
+      // Arama yoksa önerilen modeller üstte.
+      if (terim) return 0;
+      const ia = ONERILEN_MODELLER.indexOf(a.id);
+      const ib = ONERILEN_MODELLER.indexOf(b.id);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+  const gosterilen = filtreli.slice(0, 100);
+
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className={`${ETIKET_SINIFI} mb-0`}>Yapay Zeka Modeli (OpenRouter)</span>
+        <button type="button" onClick={getir} disabled={yukleniyor} className="text-[11px] font-medium text-orange-600 hover:text-orange-700 disabled:opacity-50">
+          <FontAwesomeIcon icon={yukleniyor ? faSpinner : faRotate} spin={yukleniyor} className="mr-1" />
+          Listeyi Yenile
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setAcik((a) => !a)}
+        aria-expanded={acik}
+        className="ui-focus flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2 text-left"
+      >
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold text-gray-800">{seciliModel?.ad ?? secili}</span>
+          <span className="block truncate text-[11px] text-gray-500">
+            {secili}
+            {seciliModel && ` · ${fiyatMetni(seciliModel)}`}
+          </span>
+        </span>
+        <FontAwesomeIcon icon={faChevronDown} className={`shrink-0 text-xs text-gray-500 transition-transform ${acik ? "rotate-180" : ""}`} />
+      </button>
+
+      {hata && <p className="mt-1 text-[11px] text-red-600">{hata}</p>}
+      {modeller && !seciliModel && (
+        <p className="mt-1 text-[11px] text-amber-600">Seçili model OpenRouter listesinde bulunamadı, başka bir model seçin.</p>
+      )}
+
+      {acik && (
+        <div className="mt-2 space-y-2 rounded-xl border border-gray-200 bg-white p-2">
+          <input
+            value={arama}
+            onChange={(e) => setArama(e.target.value)}
+            placeholder="Model ara (örn: gemini, gpt, claude)…"
+            aria-label="Model ara"
+            className={ALAN_SINIFI}
+          />
+          <label className="flex items-center gap-2 px-1 text-[11px] text-gray-600">
+            <input type="checkbox" checked={sadeceUcretsiz} onChange={(e) => setSadeceUcretsiz(e.target.checked)} />
+            Yalnızca ücretsiz modeller
+          </label>
+          {!modeller ? (
+            <p className="py-4 text-center text-xs text-gray-400">
+              {yukleniyor ? "Modeller yükleniyor…" : "Model listesi alınamadı."}
+            </p>
+          ) : (
+            <ul className="max-h-72 space-y-1 overflow-y-auto">
+              {gosterilen.map((m) => {
+                const aktif = m.id === secili;
+                return (
+                  <li key={m.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sec(m.id);
+                        setAcik(false);
+                      }}
+                      className={`ui-focus w-full min-w-0 rounded-lg px-2.5 py-1.5 text-left ${aktif ? "bg-orange-50 ring-1 ring-orange-200" : "hover:bg-gray-50"}`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate text-xs font-semibold text-gray-800">{m.ad}</span>
+                        {ONERILEN_MODELLER.includes(m.id) && (
+                          <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 text-[9px] font-semibold text-emerald-700">Önerilen</span>
+                        )}
+                      </span>
+                      <span className="block truncate text-[10px] text-gray-500">
+                        {m.id} · {fiyatMetni(m)}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+              {filtreli.length === 0 && <li className="py-3 text-center text-xs text-gray-400">Sonuç yok.</li>}
+              {filtreli.length > gosterilen.length && (
+                <li className="py-1 text-center text-[10px] text-gray-400">
+                  {filtreli.length - gosterilen.length} model daha var, aramayı daraltın.
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+      )}
+      <p className="mt-1 text-[11px] text-gray-500">Değişiklik &quot;Ayarları Kaydet&quot; ile kaydedilir.</p>
+    </div>
+  );
+}
 
 export default function DmAsistaniManager() {
   const bildir = useBildirim();
@@ -211,6 +378,8 @@ export default function DmAsistaniManager() {
             className={ALAN_SINIFI}
           />
         </div>
+
+        <ModelSecici secili={ayar.model} sec={(id) => guncelle("model", id)} />
 
         <div>
           <label htmlFor="dm-durum" className={ETIKET_SINIFI}>Güncel Durum / Bugün Ne Yapıyoruz?</label>

@@ -17,6 +17,7 @@ export const GECMIS_SINIRI = 50;
 export type DmAyarlar = {
   aktif: boolean;
   gecikme_saniye: number;
+  model: string;
   openrouter_api_key: string;
   instagram_access_token: string;
   instagram_verify_token: string;
@@ -36,9 +37,12 @@ export type DmKayit = {
   not?: string;
 };
 
+export const VARSAYILAN_MODEL = "google/gemini-2.5-flash";
+
 export const VARSAYILAN_AYARLAR: DmAyarlar = {
   aktif: true,
   gecikme_saniye: 8,
+  model: VARSAYILAN_MODEL,
   openrouter_api_key: "",
   instagram_access_token: "",
   instagram_verify_token: "cocuklar_usumesin_2026",
@@ -102,6 +106,7 @@ function ayarlariNormallestir(ham: Partial<DmAyarlar> | null): DmAyarlar {
     instagram_verify_token: String(a.instagram_verify_token ?? ""),
     guncel_durum: String(a.guncel_durum ?? ""),
     sistem_talimati: String(a.sistem_talimati ?? ""),
+    model: String(a.model ?? "").trim() || VARSAYILAN_MODEL,
   };
 }
 
@@ -185,7 +190,7 @@ export async function cevapUret(ayar: DmAyarlar, mesaj: string): Promise<string>
       "X-Title": "Cocuklar Usumesin DM",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: ayar.model || VARSAYILAN_MODEL,
       temperature: 0.7,
       max_tokens: 300,
       messages: [
