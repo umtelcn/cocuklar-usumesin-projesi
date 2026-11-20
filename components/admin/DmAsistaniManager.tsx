@@ -26,7 +26,7 @@ import {
   useBildirim,
 } from "@/components/admin/ortak";
 
-const WEBHOOK_URL = "https://cocuklarusumesindestek.com/api/instagram-webhook";
+const WEBHOOK_URL = "https://www.cocuklarusumesindestek.com/api/instagram-webhook";
 
 type Ayarlar = {
   aktif: boolean;
