@@ -11,7 +11,7 @@ type IstekSecenekleri = {
   sorgu?: Record<string, string | number | undefined | null>;
 };
 
-async function erisimAnahtari(): Promise<string> {
+export async function erisimAnahtari(): Promise<string> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new YetkiHatasi("Oturum bulunamadı. Lütfen giriş yapın.");

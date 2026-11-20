@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBoxOpen,
   faCircleQuestion,
+  faCommentDots,
   faHandHoldingHeart,
   faHeart,
   faImages,
@@ -24,8 +25,9 @@ import IadeYonetimi from "@/components/admin/IadeYonetimi";
 import UrunYonetimi from "@/components/admin/UrunYonetimi";
 import BagisYonetimi from "@/components/admin/BagisYonetimi";
 import SssYonetimi from "@/components/admin/SssYonetimi";
+import DmAsistaniManager from "@/components/admin/DmAsistaniManager";
 
-type ModulId = "gonderiler" | "talepler" | "iadeler" | "urunler" | "bagislar" | "sss";
+type ModulId = "gonderiler" | "talepler" | "iadeler" | "urunler" | "bagislar" | "sss" | "dm";
 
 // Mobil sütunda 3x2 ızgara olarak gösterilir; sıra bilinçli seçilmiştir.
 const MODULLER: { id: ModulId; etiket: string; ikon: IconDefinition }[] = [
@@ -35,6 +37,7 @@ const MODULLER: { id: ModulId; etiket: string; ikon: IconDefinition }[] = [
   { id: "urunler", etiket: "Ürünler", ikon: faBoxOpen },
   { id: "iadeler", etiket: "İade Talepleri", ikon: faRotateLeft },
   { id: "sss", etiket: "SSS", ikon: faCircleQuestion },
+  { id: "dm", etiket: "💬 DM Asistanı", ikon: faCommentDots },
 ];
 
 type Durum = "kontrol" | "giris" | "hazir";
@@ -176,6 +179,7 @@ export default function AdminPanel() {
               {aktifModul === "urunler" && <UrunYonetimi />}
               {aktifModul === "bagislar" && <BagisYonetimi />}
               {aktifModul === "sss" && <SssYonetimi />}
+              {aktifModul === "dm" && <DmAsistaniManager />}
             </div>
           </div>
         )}
