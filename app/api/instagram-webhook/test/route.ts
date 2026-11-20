@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { govdeOku, hata, yoneticiDogrula } from "@/lib/server/adminYetki";
 import { ayarlariOku, cevapUret, gecmiseEkle, INSANA_DEVRET } from "@/lib/dmStorage";
 
+export const maxDuration = 60;
 
-/** Admin panelindeki Canlı Test Sohbeti: yalnızca yöneticiler kullanabilir. */
+/**
+ * Admin panelindeki Canlı Test Sohbeti: yalnızca yöneticiler kullanabilir.
+ * Gövde: `{ mesaj, history: [{ role: 'user' | 'assistant', content }] }`
+ */
 export async function POST(req: Request) {
   const yetki = await yoneticiDogrula(req);
   if (yetki instanceof NextResponse) return yetki;
@@ -14,14 +18,14 @@ export async function POST(req: Request) {
 
   const ayar = await ayarlariOku();
   try {
-    const cevap = await cevapUret(ayar, mesaj);
+    const cevap = await cevapUret(ayar, mesaj, govde?.history);
     const devret = cevap.includes(INSANA_DEVRET);
     const kayit = await gecmiseEkle({
       gonderen_id: "admin-test",
       kullanici_mesaji: mesaj,
       ai_cevabi: cevap,
       durum: "test",
-      not: devret ? "Gerçekte insana devredilirdi" : undefined,
+      not: devret ? "Gerçekte insana devredilirdi" : `Model: ${ayar.model}`,
     });
     return NextResponse.json({ cevap, insana_devret: devret, kayit });
   } catch (err) {

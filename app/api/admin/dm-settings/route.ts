@@ -5,6 +5,9 @@ import {
   ayarlariOku,
   gecmisiOku,
   gecmisiTemizle,
+  hafizadanSil,
+  hafizaOku,
+  hafizayaEkle,
   maskele,
   type DmAyarlar,
 } from "@/lib/dmStorage";
@@ -26,8 +29,8 @@ export async function GET(req: Request) {
   const yetki = await yoneticiDogrula(req);
   if (yetki instanceof NextResponse) return yetki;
 
-  const [ayarlar, gecmis] = await Promise.all([ayarlariOku(), gecmisiOku()]);
-  return NextResponse.json({ ayarlar: istemciyeHazirla(ayarlar), gecmis });
+  const [ayarlar, gecmis, hafiza] = await Promise.all([ayarlariOku(), gecmisiOku(), hafizaOku()]);
+  return NextResponse.json({ ayarlar: istemciyeHazirla(ayarlar), gecmis, hafiza });
 }
 
 export async function POST(req: Request) {
@@ -41,6 +44,18 @@ export async function POST(req: Request) {
     if (govde.islem === "gecmisi_temizle") {
       await gecmisiTemizle();
       return NextResponse.json({ success: true, gecmis: [] });
+    }
+    if (govde.islem === "hafiza_ekle") {
+      const soru = typeof govde.soru === "string" ? govde.soru : "";
+      const cevap = typeof govde.dogru_cevap === "string" ? govde.dogru_cevap : "";
+      if (!soru.trim() || !cevap.trim()) return hata("Soru ve doğru cevap boş olamaz.", 400);
+      const hafiza = await hafizayaEkle(soru, cevap, "panel_ogreti");
+      return NextResponse.json({ success: true, hafiza });
+    }
+    if (govde.islem === "hafiza_sil") {
+      if (typeof govde.id !== "string" || !govde.id) return hata("Geçersiz kayıt.", 400);
+      const hafiza = await hafizadanSil(govde.id);
+      return NextResponse.json({ success: true, hafiza });
     }
 
     const yeni: Partial<DmAyarlar> = {};

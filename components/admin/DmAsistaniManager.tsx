@@ -5,9 +5,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronDown,
   faCommentDots,
+  faBrain,
   faCopy,
   faFloppyDisk,
   faPaperPlane,
+  faPlus,
   faRotate,
   faSpinner,
   faTrash,
@@ -49,9 +51,24 @@ type Kayit = {
   ai_cevabi: string;
   durum: "cevaplandi" | "insana_devredildi" | "test" | "hata";
   not?: string;
+  admin_cevabi?: string;
 };
 
-type Balon = { kim: "ben" | "ai"; metin: string; devret?: boolean; hata?: boolean };
+type Hafiza = {
+  id: string;
+  tarih: string;
+  soru: string;
+  dogru_cevap: string;
+  kaynak: "instagram_admin" | "panel_ogreti";
+};
+
+/** `soru`: AI balonunun cevapladığı kullanıcı mesajı ("Doğrusunu Öğret" için). */
+type Balon = { kim: "ben" | "ai"; metin: string; devret?: boolean; hata?: boolean; soru?: string };
+
+const KAYNAK_ROZETI: Record<Hafiza["kaynak"], { etiket: string; sinif: string }> = {
+  instagram_admin: { etiket: "Instagram'dan öğrendi", sinif: "bg-violet-50 text-violet-700 border-violet-100" },
+  panel_ogreti: { etiket: "Panelden öğretildi", sinif: "bg-sky-50 text-sky-700 border-sky-100" },
+};
 
 const DURUM_ROZETI: Record<Kayit["durum"], { etiket: string; sinif: string }> = {
   cevaplandi: { etiket: "Cevaplandı", sinif: "bg-emerald-50 text-emerald-700 border-emerald-100" },
@@ -69,13 +86,14 @@ type Model = {
   ucretsiz: boolean;
 };
 
-const ONERILEN_MODELLER = [
-  "google/gemini-2.5-flash",
-  "google/gemini-2.5-flash-lite",
-  "openai/gpt-4o-mini",
-  "anthropic/claude-haiku-4.5",
-  "deepseek/deepseek-chat-v3.1",
+const ONERILEN: { id: string; ad: string; aciklama: string }[] = [
+  { id: "anthropic/claude-sonnet-5.5", ad: "Claude Sonnet 5.5", aciklama: "En Doğal & İnsansı · Varsayılan" },
+  { id: "anthropic/claude-opus-5.5", ad: "Claude Opus 5.5", aciklama: "En Yüksek Empati & Duygusal Zeka" },
+  { id: "anthropic/claude-fable-5.2", ad: "Claude Fable 5.2", aciklama: "En Üst Amiral Gemisi" },
+  { id: "google/gemini-4-argon", ad: "Gemini 4 Argon", aciklama: "Güçlü Türkçe" },
+  { id: "openai/gpt-6.2-sol", ad: "GPT-6.2 Sol", aciklama: "OpenAI" },
 ];
+const ONERILEN_MODELLER = ONERILEN.map((m) => m.id);
 
 function fiyatMetni(m: Model): string {
   if (m.ucretsiz) return "Ücretsiz";
@@ -146,6 +164,40 @@ function ModelSecici({ secili, sec }: { secili: string; sec: (id: string) => voi
         </button>
       </div>
 
+      <div className="mb-2 grid grid-cols-1 gap-1.5">
+        {ONERILEN.map((o) => {
+          const aktif = o.id === secili;
+          const bilgi = modeller?.find((m) => m.id === o.id);
+          return (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => sec(o.id)}
+              aria-pressed={aktif}
+              className={`ui-focus flex min-w-0 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
+                aktif ? "border-orange-300 bg-orange-50 ring-1 ring-orange-200" : "border-gray-200 bg-white hover:bg-gray-50"
+              }`}
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-xs font-semibold text-gray-800">{o.ad}</span>
+                <span className="block truncate text-[10px] text-gray-500">
+                  {o.aciklama}
+                  {bilgi && ` · ${fiyatMetni(bilgi)}`}
+                </span>
+              </span>
+              <span
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                  aktif ? "border-orange-500 bg-orange-500" : "border-gray-300"
+                }`}
+              >
+                {aktif && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="mb-1 text-[11px] text-gray-500">veya OpenRouter&apos;daki tüm modellerden seçin:</p>
       <button
         type="button"
         onClick={() => setAcik((a) => !a)}
@@ -226,6 +278,56 @@ function ModelSecici({ secili, sec }: { secili: string; sec: (id: string) => voi
   );
 }
 
+/** "✏️ Doğrusunu Öğret" satır içi formu. */
+function OgretFormu({
+  soru,
+  baslangic,
+  kaydet,
+  kapat,
+}: {
+  soru: string;
+  baslangic: string;
+  kaydet: (soru: string, cevap: string) => Promise<boolean>;
+  kapat: () => void;
+}) {
+  const [cevap, setCevap] = useState(baslangic);
+  const [mesgul, setMesgul] = useState(false);
+
+  const gonder = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!cevap.trim()) return;
+    setMesgul(true);
+    const tamam = await kaydet(soru, cevap);
+    setMesgul(false);
+    if (tamam) kapat();
+  };
+
+  return (
+    <form onSubmit={gonder} className="mt-2 space-y-2 rounded-xl border border-orange-200 bg-orange-50/60 p-2.5 text-left">
+      <p className="break-words text-[11px] text-gray-600">
+        <span className="font-semibold">Soru:</span> {soru}
+      </p>
+      <textarea
+        value={cevap}
+        onChange={(e) => setCevap(e.target.value)}
+        rows={3}
+        maxLength={4000}
+        autoFocus
+        aria-label="Doğru cevap"
+        placeholder="Bu soruya bizim vereceğimiz doğru cevabı yazın…"
+        className={`${METIN_ALANI_SINIFI} bg-white text-xs`}
+      />
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={kapat} className={BUTON.ikincil}>Vazgeç</button>
+        <button type="submit" disabled={mesgul || !cevap.trim()} className={`${BUTON.ana} h-9`}>
+          <FontAwesomeIcon icon={mesgul ? faSpinner : faBrain} spin={mesgul} />
+          Hafızaya Kaydet
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default function DmAsistaniManager() {
   const bildir = useBildirim();
   const [ayar, setAyar] = useState<Ayarlar | null>(null);
@@ -234,6 +336,12 @@ export default function DmAsistaniManager() {
   const [kaydediliyor, setKaydediliyor] = useState(false);
   const [apiAcik, setApiAcik] = useState(false);
   const [temizleniyor, setTemizleniyor] = useState(false);
+  const [hafiza, setHafiza] = useState<Hafiza[]>([]);
+  /** Açık olan "Doğrusunu Öğret" formu: `sohbet-<index>` veya `kayit-<id>`. */
+  const [ogretilen, setOgretilen] = useState<string | null>(null);
+  const [yeniSoru, setYeniSoru] = useState("");
+  const [yeniCevap, setYeniCevap] = useState("");
+  const [hafizaEkleniyor, setHafizaEkleniyor] = useState(false);
 
   const [sohbet, setSohbet] = useState<Balon[]>([]);
   const [testMesaj, setTestMesaj] = useState("");
@@ -243,9 +351,10 @@ export default function DmAsistaniManager() {
   const yukle = useCallback(async () => {
     setHata(null);
     try {
-      const veri = await adminIstek<{ ayarlar: Ayarlar; gecmis: Kayit[] }>("dm-settings");
+      const veri = await adminIstek<{ ayarlar: Ayarlar; gecmis: Kayit[]; hafiza: Hafiza[] }>("dm-settings");
       setAyar(veri.ayarlar);
       setGecmis(veri.gecmis);
+      setHafiza(veri.hafiza ?? []);
     } catch (err) {
       setHata(hataMesaji(err));
     }
@@ -299,6 +408,10 @@ export default function DmAsistaniManager() {
     const mesaj = testMesaj.trim();
     if (!mesaj || testBekliyor) return;
     setTestMesaj("");
+    // Ekrandaki önceki konuşma, modelin aynı bilgileri tekrar etmemesi için gönderilir.
+    const history = sohbet
+      .filter((b) => !b.hata)
+      .map((b) => ({ role: b.kim === "ben" ? "user" : "assistant", content: b.metin }));
     setSohbet((s) => [...s, { kim: "ben", metin: mesaj }]);
     setTestBekliyor(true);
     try {
@@ -307,7 +420,7 @@ export default function DmAsistaniManager() {
         method: "POST",
         cache: "no-store",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ mesaj }),
+        body: JSON.stringify({ mesaj, history }),
       });
       const veri = (await yanit.json().catch(() => null)) as {
         cevap?: string;
@@ -316,12 +429,51 @@ export default function DmAsistaniManager() {
         error?: string;
       } | null;
       if (!yanit.ok || !veri?.cevap) throw new Error(veri?.error || "Cevap alınamadı.");
-      setSohbet((s) => [...s, { kim: "ai", metin: veri.cevap!, devret: veri.insana_devret }]);
+      setSohbet((s) => [...s, { kim: "ai", metin: veri.cevap!, devret: veri.insana_devret, soru: mesaj }]);
       if (veri.kayit) setGecmis((g) => [veri.kayit!, ...g].slice(0, 50));
     } catch (err) {
       setSohbet((s) => [...s, { kim: "ai", metin: hataMesaji(err), hata: true }]);
     } finally {
       setTestBekliyor(false);
+    }
+  };
+
+  const hafizayaKaydet = async (soru: string, cevap: string): Promise<boolean> => {
+    try {
+      const veri = await adminIstek<{ hafiza: Hafiza[] }>("dm-settings", {
+        method: "POST",
+        body: { islem: "hafiza_ekle", soru, dogru_cevap: cevap },
+      });
+      setHafiza(veri.hafiza);
+      bildir("Hafızaya kaydedildi, benzer sorularda bu cevabı örnek alacak.", "basari");
+      return true;
+    } catch (err) {
+      bildir(hataMesaji(err), "hata");
+      return false;
+    }
+  };
+
+  const hafizaElleEkle = async (e: FormEvent) => {
+    e.preventDefault();
+    setHafizaEkleniyor(true);
+    if (await hafizayaKaydet(yeniSoru, yeniCevap)) {
+      setYeniSoru("");
+      setYeniCevap("");
+    }
+    setHafizaEkleniyor(false);
+  };
+
+  const hafizaSil = async (id: string) => {
+    if (!window.confirm("Bu hafıza kaydı silinsin mi?")) return;
+    try {
+      const veri = await adminIstek<{ hafiza: Hafiza[] }>("dm-settings", {
+        method: "POST",
+        body: { islem: "hafiza_sil", id },
+      });
+      setHafiza(veri.hafiza);
+      bildir("Hafıza kaydı silindi.", "basari");
+    } catch (err) {
+      bildir(hataMesaji(err), "hata");
     }
   };
 
@@ -497,6 +649,23 @@ export default function DmAsistaniManager() {
                 {b.devret && (
                   <span className="mt-1 block text-[10px] font-semibold text-amber-600">Gerçekte cevap gönderilmez, insana bırakılır.</span>
                 )}
+                {b.kim === "ai" && !b.hata && b.soru && ogretilen !== `sohbet-${i}` && (
+                  <button
+                    type="button"
+                    onClick={() => setOgretilen(`sohbet-${i}`)}
+                    className="mt-1.5 block text-[11px] font-semibold text-orange-600 hover:text-orange-700"
+                  >
+                    ✏️ Doğrusunu Öğret
+                  </button>
+                )}
+                {b.kim === "ai" && b.soru && ogretilen === `sohbet-${i}` && (
+                  <OgretFormu
+                    soru={b.soru}
+                    baslangic={b.devret ? "" : b.metin}
+                    kaydet={hafizayaKaydet}
+                    kapat={() => setOgretilen(null)}
+                  />
+                )}
               </div>
             </div>
           ))}
@@ -555,7 +724,104 @@ export default function DmAsistaniManager() {
                       {k.ai_cevabi}
                     </p>
                   )}
+                  {k.admin_cevabi && (
+                    <p className="break-words text-xs text-gray-700">
+                      <span className="font-semibold text-violet-600">Yönetici: </span>
+                      {k.admin_cevabi}
+                    </p>
+                  )}
                   {k.not && <p className="break-words text-[11px] italic text-gray-400">{k.not}</p>}
+                  {k.kullanici_mesaji && !k.kullanici_mesaji.startsWith("[Görsel") &&
+                    (ogretilen === `kayit-${k.id}` ? (
+                      <OgretFormu
+                        soru={k.kullanici_mesaji}
+                        baslangic={k.admin_cevabi || (k.ai_cevabi.includes("[INSANA_DEVRET]") ? "" : k.ai_cevabi)}
+                        kaydet={hafizayaKaydet}
+                        kapat={() => setOgretilen(null)}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setOgretilen(`kayit-${k.id}`)}
+                        className="text-[11px] font-semibold text-orange-600 hover:text-orange-700"
+                      >
+                        ✏️ Doğrusunu Öğret
+                      </button>
+                    ))}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section className="donation-panel min-w-0 space-y-3 p-4">
+        <div>
+          <h3 className="text-sm font-bold text-gray-800">🧠 Öğrenilen Hafıza ({hafiza.length})</h3>
+          <p className="text-[11px] text-gray-500">
+            Yapay zeka benzer sorularda bu cevapların bilgisini ve üslubunu örnek alır. Instagram&apos;da
+            telefondan elle verdiğiniz cevaplar da buraya otomatik eklenir.
+          </p>
+        </div>
+
+        <form onSubmit={hafizaElleEkle} className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <input
+            value={yeniSoru}
+            onChange={(e) => setYeniSoru(e.target.value)}
+            maxLength={2000}
+            placeholder="Takipçinin sorusu (örn: Kargo ile kıyafet gönderebilir miyim?)"
+            aria-label="Yeni hafıza sorusu"
+            className={`${ALAN_SINIFI} bg-white`}
+          />
+          <textarea
+            value={yeniCevap}
+            onChange={(e) => setYeniCevap(e.target.value)}
+            rows={3}
+            maxLength={4000}
+            placeholder="Bizim vereceğimiz doğru cevap"
+            aria-label="Yeni hafıza cevabı"
+            className={`${METIN_ALANI_SINIFI} bg-white`}
+          />
+          <button
+            type="submit"
+            disabled={hafizaEkleniyor || !yeniSoru.trim() || !yeniCevap.trim()}
+            className={`${BUTON.ana} w-full`}
+          >
+            <FontAwesomeIcon icon={hafizaEkleniyor ? faSpinner : faPlus} spin={hafizaEkleniyor} />
+            Hafızaya Ekle
+          </button>
+        </form>
+
+        {hafiza.length === 0 ? (
+          <p className="py-4 text-center text-xs text-gray-400">Henüz öğrenilmiş bir cevap yok.</p>
+        ) : (
+          <ul className="space-y-2">
+            {hafiza.map((h) => {
+              const rozet = KAYNAK_ROZETI[h.kaynak] ?? KAYNAK_ROZETI.panel_ogreti;
+              return (
+                <li key={h.id} className="min-w-0 space-y-1.5 rounded-xl border border-gray-100 bg-white p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${rozet.sinif}`}>{rozet.etiket}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-gray-400">{tarihBicimle(h.tarih)}</span>
+                      <button
+                        type="button"
+                        onClick={() => void hafizaSil(h.id)}
+                        aria-label="Hafıza kaydını sil"
+                        className="ui-focus flex h-7 w-7 items-center justify-center rounded-lg text-xs text-red-500 hover:bg-red-50"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="break-words text-xs text-gray-700">
+                    <span className="font-semibold text-gray-500">Soru: </span>
+                    {h.soru}
+                  </p>
+                  <p className="whitespace-pre-wrap break-words text-xs text-gray-700">
+                    <span className="font-semibold text-emerald-600">Doğru cevap: </span>
+                    {h.dogru_cevap}
+                  </p>
                 </li>
               );
             })}

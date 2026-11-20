@@ -18,5 +18,8 @@ export function supabaseAdminOlustur(): SupabaseClient | null {
 
   return createClient(url, gizliAnahtar, {
     auth: { persistSession: false, autoRefreshToken: false },
+    // Next.js fetch'i önbelleğe/tekilleştirmeye alabilir; yönetici verisi
+    // (özellikle Storage'daki JSON kayıtları) her zaman taze okunmalı.
+    global: { fetch: (girdi, ayar) => fetch(girdi, { ...ayar, cache: "no-store" }) },
   });
 }
